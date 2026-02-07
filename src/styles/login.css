@@ -1,0 +1,16 @@
+/* Login page styles */
+
+.login-submit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.login-card-responsive a:hover {
+  color: #FFD700 !important;
+}
+
+.login-card-responsive input:focus {
+  border-color: #FFD700 !important;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+}
+

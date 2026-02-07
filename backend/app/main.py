@@ -1,0 +1,59 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.v1.api import api_router
+from app.core.config import settings
+
+# --- Entrypoint de la Aplicación ---
+# Aquí arranca el servidor. Configura el título, versión, documentación (Swagger)
+# y, crucialmente, los Middlewares y Rutas.
+
+app = FastAPI(
+    title="WebPoke API", 
+    description="API RESTful para E-commerce de Pokémon construida con FastAPI y MongoDB",
+    version="1.0.0",
+    docs_url="/docs", # URL para Swagger UI (interfaz interactiva)
+    redoc_url="/redoc" # URL para ReDoc (documentación estática bonita)
+)
+
+# --- Configuración CORS (Cross-Origin Resource Sharing) ---
+# Permite que el navegador haga peticiones fetch() desde dominios distintos al backend.
+# En desarrollo, permitimos localhost:3000 (React/Next) y localhost:5173 (Vite).
+# En producción, esto debe ser una lista estricta de dominios confiables.
+
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+
+# El middleware CORS intercepta cada petición y añade cabeceras como:
+# Access-Control-Allow-Origin: http://localhost:5173
+# Access-Control-Allow-Methods: GET, POST...
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True, # Permite cookies/headers de autorización
+    allow_methods=["*"],    # Métodos HTTP permitidos (GET, POST, PUT, DELETE, OPTIONS)
+    allow_headers=["*"],    # Cabeceras permitidas (Content-Type, Authorization...)
+)
+
+# --- Registramos las Rutas (Routers) ---
+# Todas las rutas definidas en api/v1/api.py estarán prefijadas con /api/v1
+# Ejemplo: /api/v1/user/me
+app.include_router(api_router, prefix="/api/v1")
+
+@app.get("/")
+async def root():
+    """
+    Ruta raíz (Health Check).
+    Útil para verificar rápidamente si el servidor está vivo.
+    """
+    return {
+        "status": "online",
+        "message": "WebPoke API is running! 🚀",
+        "docs": "/docs",
+        "version": "1.0.0"
+    }
+
+# Para correr: uvicorn app.main:app --reload

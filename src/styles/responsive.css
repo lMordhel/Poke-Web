@@ -1,0 +1,74 @@
+/* Responsive styles for the Pokémon store */
+
+@media (max-width: 1024px) {
+  /* Hero section - stack on tablets */
+  .hero-responsive {
+    grid-template-columns: 1fr !important;
+    
+  }
+  
+  /* Products grid - 3 columns on tablets */
+  .products-grid-responsive {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  
+  /* Features grid - 2 columns on tablets */
+  .features-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Products grid - 2 columns on mobile */
+  .products-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  /* Features grid - 1 column on mobile */
+  .features-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Smaller hero title on mobile */
+  .hero-title-responsive {
+    font-size: 2.5rem !important;
+  }
+  
+  /* Stack buttons on mobile */
+  .button-group-responsive {
+    flex-direction: column !important;
+  }
+  
+  /* Stack header elements on mobile */
+  .header-container-responsive {
+    flex-wrap: wrap !important;
+    gap: 1rem !important;
+  }
+  
+  .nav-responsive {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Single column on very small screens */
+  .products-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .hero-title-responsive {
+    font-size: 2rem !important;
+  }
+  
+  /* Login responsive */
+  .login-container-responsive {
+    padding: 1rem !important;
+  }
+  
+  .login-card-responsive {
+    padding: 2rem !important;
+  }
+}
+

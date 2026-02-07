@@ -1,0 +1,6 @@
+/* Add this to your main CSS file or import it in catalogStyles */
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
