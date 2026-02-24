@@ -5,6 +5,8 @@ export const homeStyles = {
     maxWidth: '1200px',
     margin: '0 auto',
     padding: '4rem 2rem',
+    position: 'relative',
+    overflow: 'hidden',
   },
   hero: {
     display: 'grid',
@@ -13,12 +15,26 @@ export const homeStyles = {
     alignItems: 'center',
     marginBottom: '8rem',
     paddingTop: '2rem',
+    position: 'relative',
+  },
+  heroBackgroundGlow: {
+    position: 'absolute',
+    top: '-20%',
+    left: '-10%',
+    width: '600px',
+    height: '600px',
+    background: 'radial-gradient(circle, rgba(255,214,10,0.12) 0%, rgba(255,255,255,0) 70%)',
+    borderRadius: '50%',
+    zIndex: -1,
+    filter: 'blur(40px)',
+    pointerEvents: 'none',
   },
   heroContent: {
     display: 'flex',
     flexDirection: 'column',
     gap: '2rem',
     alignItems: 'flex-start',
+    zIndex: 1,
   },
   banner: {
     display: 'inline-flex',
@@ -46,7 +62,7 @@ export const homeStyles = {
   },
   highlight: {
     color: colors.yellowPrimary,
-    WebkitTextFillColor: colors.yellowPrimary, // Override gradient for highlight
+    WebkitTextFillColor: colors.yellowPrimary,
     position: 'relative',
     display: 'inline-block',
     zIndex: 1,
@@ -73,7 +89,6 @@ export const homeStyles = {
     fontWeight: '700',
     color: colors.black,
     fontSize: '1.125rem',
-    transition: colors.transition,
     textDecoration: 'none',
     boxShadow: '0 4px 6px -1px rgba(255, 214, 10, 0.4), 0 2px 4px -1px rgba(255, 214, 10, 0.2)',
     border: 'none',
@@ -88,7 +103,6 @@ export const homeStyles = {
     color: colors.black,
     fontSize: '1.125rem',
     cursor: 'pointer',
-    transition: colors.transition,
   },
   stats: {
     display: 'flex',
@@ -122,9 +136,10 @@ export const homeStyles = {
     borderRadius: '2rem',
     width: '100%',
     boxShadow: colors.shadowXl,
-    overflow: 'hidden', // Ensure image stays within radius
+    overflow: 'hidden',
     background: colors.white,
-    padding: '1rem', // Frame effect
+    padding: '1rem',
+    cursor: 'pointer',
   },
   image: {
     width: '100%',
@@ -138,15 +153,17 @@ export const homeStyles = {
     position: 'absolute',
     top: '30px',
     right: '30px',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(8px)',
     padding: '1rem 1.25rem',
     borderRadius: colors.radiusLg,
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
     zIndex: 2,
-    boxShadow: colors.shadowLg,
+    background: 'rgba(255, 255, 255, 0.85)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.6)',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
   },
   bestSellerLabel: {
     fontSize: '0.75rem',
@@ -183,6 +200,7 @@ export const homeStyles = {
     marginBottom: '1.5rem',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
+    border: '1px solid rgba(245, 158, 11, 0.2)',
   },
   sectionTitle: {
     fontSize: '3rem',
@@ -209,7 +227,7 @@ export const homeStyles = {
     gap: '0.75rem',
     margin: '0 auto',
     padding: '1rem 3rem',
-    backgroundColor: colors.black, // Dark button for contrast
+    backgroundColor: colors.black,
     border: 'none',
     borderRadius: colors.radiusFull,
     fontWeight: '600',
@@ -217,7 +235,6 @@ export const homeStyles = {
     fontSize: '1rem',
     width: 'fit-content',
     textDecoration: 'none',
-    transition: colors.transition,
     boxShadow: colors.shadowMd,
   },
   featuresSection: {
@@ -230,11 +247,12 @@ export const homeStyles = {
   },
   featureCard: {
     textAlign: 'center',
-    padding: '2rem',
+    padding: '2.5rem 2rem',
     backgroundColor: colors.white,
     borderRadius: colors.radiusLg,
     boxShadow: colors.shadowSm,
-    transition: colors.transition,
+    border: `1px solid ${colors.grayLight}`,
+    cursor: 'pointer',
   },
   featureIcon: {
     width: '72px',
@@ -259,4 +277,3 @@ export const homeStyles = {
     lineHeight: '1.6',
   },
 };
-

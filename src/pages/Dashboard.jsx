@@ -17,24 +17,25 @@ const Dashboard = () => {
       try {
         // Get current user data from backend
         const userData = await apiService.getCurrentUser();
-        
+
         // Update user state with backend data
         const currentUserData = {
           id: userData.id,
           name: userData.name || userData.email.split('@')[0],
           email: userData.email,
+          role: userData.role,
           loggedIn: true
         };
-        
+
         setUser(currentUserData);
         localStorage.setItem('currentUser', JSON.stringify(currentUserData));
-        
+
         // Cargar favoritos del usuario
         const favoritesKey = `favorites_${userData.email}`;
         const userFavorites = JSON.parse(localStorage.getItem(favoritesKey) || '[]');
         setFavorites(userFavorites);
         setFavoritesCount(userFavorites.length);
-        
+
       } catch (error) {
         console.error('Failed to load user data:', error);
         // If token is invalid, redirect to login
@@ -61,7 +62,7 @@ const Dashboard = () => {
     window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
     // Escuchar cambios en localStorage (entre pestañas)
     window.addEventListener('storage', handleFavoritesUpdate);
-    
+
     // También verificar periódicamente (por si acaso)
     const interval = setInterval(handleFavoritesUpdate, 1000);
 
@@ -75,7 +76,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     // Clear tokens and user data
     apiService.clearToken();
-    
+
     // Disparar evento personalizado para actualizar el Header
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('userLogout'));

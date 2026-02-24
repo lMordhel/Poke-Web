@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, UploadFile, File
 from typing import Optional, List
+import os
+import shutil
+import uuid
 from bson import ObjectId
 from app.db import db
+from app.core.security import get_current_admin_user
 from app.schemas.product import ProductCreate, ProductList, ProductOut
 
 # --- Endpoints de Productos (API REST clásica) ---
@@ -75,9 +79,12 @@ async def read_product(product_id: str):
     return doc
 
 @router.post("/", response_model=ProductOut, status_code=201)
-async def create_product(product: ProductCreate):
+async def create_product(
+    product: ProductCreate,
+    current_admin: dict = Depends(get_current_admin_user)
+):
     """
-    Crea un nuevo producto. (Endpoints como este deberían protegerse con autenticación en el futuro).
+    Crea un nuevo producto. Solo administradores.
     """
     
     # Verificar duplicados por nombre
@@ -95,6 +102,50 @@ async def create_product(product: ProductCreate):
     product_dict["id"] = str(result.inserted_id)
     return product_dict
 
+@router.put("/{product_id}", response_model=ProductOut)
+async def update_product(
+    product_id: str,
+    product: ProductCreate,
+    current_admin: dict = Depends(get_current_admin_user)
+):
+    """
+    Actualiza completamente un producto. Solo administradores.
+    """
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+        
+    product_dict = product.model_dump()
+    
+    # Update Document in MongoDB
+    result = await db.products.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": product_dict}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    product_dict["id"] = product_id
+    return product_dict
+
+@router.delete("/{product_id}", status_code=204)
+async def delete_product(
+    product_id: str,
+    current_admin: dict = Depends(get_current_admin_user)
+):
+    """
+    Elimina un producto. Solo administradores.
+    """
+    if not ObjectId.is_valid(product_id):
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+        
+    result = await db.products.delete_one({"_id": ObjectId(product_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return None
+
 @router.get("/types/list")
 async def get_product_types():
     """
@@ -106,3 +157,39 @@ async def get_product_types():
     
     # Agregamos "Todos" como opción por defecto para la UI
     return {"types": ["Todos"] + types}
+
+@router.post("/upload-image", status_code=201)
+async def upload_product_image(
+    file: UploadFile = File(...),
+    current_admin: dict = Depends(get_current_admin_user)
+):
+    """
+    Sube una imagen al servidor en la carpeta estática "uploads/".
+    Devuelve la URL pública para ser usada en el frontend.
+    Solo administradores.
+    """
+    # Validaciones básicas de tipo
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(400, "File must be an image")
+        
+    # Crear directorio si no existe por algún motivo
+    upload_dir = "uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generar un nombre seguro y único usando UUID
+    extension = file.filename.split(".")[-1]
+    secure_filename = f"{uuid.uuid4().hex}.{extension}"
+    file_path = os.path.join(upload_dir, secure_filename)
+    
+    # Guardar en disco local de forma binaria
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(500, f"Error saving file: {e}")
+        
+    # Retornar la URL estática (ej: http://localhost:8000/uploads/uuid.png)
+    # Como Vite ya tiene un proxy o el .env la base_url, retornamos solo la ruta relativa absoluta
+    image_url = f"http://localhost:8000/uploads/{secure_filename}"
+    
+    return {"url": image_url}

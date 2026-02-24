@@ -41,7 +41,8 @@ async def register(payload: UserCreate):
         "created_at": datetime.now(timezone.utc),
         "is_active": True,
         # 'token_version' es una buena idea para invalidar tokens viejos si el usuario cambia contraseña
-        "token_version": 0
+        "token_version": 0,
+        "role": "user" # Todos los usuarios nuevos son clientes comunes por defecto
     }
     if payload.name:
         user_data["name"] = payload.name
@@ -54,7 +55,8 @@ async def register(payload: UserCreate):
     return UserOut(
         id=str(result.inserted_id),
         email=payload.email,
-        name=payload.name
+        name=payload.name,
+        role="user"
     )
 
 @router.post("/login", response_model=Token)

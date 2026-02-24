@@ -38,10 +38,17 @@ app.add_middleware(
     allow_headers=["*"],    # Cabeceras permitidas (Content-Type, Authorization...)
 )
 
+import os
+from fastapi.staticfiles import StaticFiles
+
 # --- Registramos las Rutas (Routers) ---
 # Todas las rutas definidas en api/v1/api.py estarán prefijadas con /api/v1
 # Ejemplo: /api/v1/user/me
 app.include_router(api_router, prefix="/api/v1")
+
+# Configuramos la carpeta local "uploads" para que pueda ser leída públicamente
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 async def root():

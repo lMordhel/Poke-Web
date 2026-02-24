@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     """
     email: EmailStr
     name: Optional[str] = None
+    role: str = "user"
 
 class UserCreate(UserBase):
     """

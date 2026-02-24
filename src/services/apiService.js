@@ -32,11 +32,15 @@ class ApiService {
 
     const config = {
       headers: {
-        'Content-Type': 'application/json',
         ...options.headers,
       },
       ...options,
     };
+
+    // If we're not sending FormData (like file uploads), default to JSON
+    if (!(options.body instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
 
     if (this.token) {
       config.headers.Authorization = `Bearer ${this.token}`;
@@ -96,8 +100,38 @@ class ApiService {
     return this.request(`/products/${id}`);
   }
 
+  async createProduct(productData) {
+    return this.request('/products/', {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  async updateProduct(id, productData) {
+    return this.request(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  async deleteProduct(id) {
+    return this.request(`/products/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getProductTypes() {
     return this.request('/products/types/list');
+  }
+
+  async uploadImage(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.request('/products/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
   }
 
   async login(credentials) {
@@ -126,6 +160,14 @@ class ApiService {
 
   async getCurrentUser() {
     return this.request('/auth/me');
+  }
+
+  async getUsers() {
+    return this.request('/admin/users');
+  }
+
+  async getAdminStats() {
+    return this.request('/admin/stats');
   }
 
   transformProduct(product) {

@@ -20,15 +20,16 @@ const Login = () => {
     try {
       // Call backend login API
       const response = await apiService.login({ email, password });
-      
+
       // Get user data from backend
       const userData = await apiService.getCurrentUser();
-      
+
       // Store current user data
       const currentUserData = {
         id: userData.id,
         name: userData.name || email.split('@')[0], // Fallback to email prefix if no name
         email: userData.email,
+        role: userData.role,
         loggedIn: true
       };
       localStorage.setItem('currentUser', JSON.stringify(currentUserData));
@@ -38,7 +39,7 @@ const Login = () => {
       window.dispatchEvent(new CustomEvent('userLogin', { detail: currentUserData }));
 
       console.log('Login exitoso:', currentUserData);
-      
+
       // Redirigir al dashboard después del login
       navigate('/dashboard');
     } catch (error) {
