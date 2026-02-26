@@ -3,6 +3,7 @@ from typing import Optional, List
 import os
 import shutil
 import uuid
+import re
 from bson import ObjectId
 from app.db import db
 from app.core.security import get_current_admin_user
@@ -78,6 +79,26 @@ async def read_product(product_id: str):
     doc["id"] = str(doc.pop("_id"))
     return doc
 
+@router.get("/slug/{slug}", response_model=ProductOut)
+async def read_product_by_slug(slug: str):
+    """
+    Obtiene el detalle de un producto por su slug.
+    Uso: GET /api/v1/products/slug/pikachu-plush
+    """
+    doc = await db.products.find_one({"slug": slug})
+    
+    if not doc:
+        # Fallback para productos antiguos que aún no tengan slug
+        # Si el slug es en realidad una _id válida de mongo, buscar por ahí
+        if ObjectId.is_valid(slug):
+            doc = await db.products.find_one({"_id": ObjectId(slug)})
+            
+    if not doc:
+        raise HTTPException(status_code=404, detail="Product not found by slug or ID")
+        
+    doc["id"] = str(doc.pop("_id"))
+    return doc
+
 @router.post("/", response_model=ProductOut, status_code=201)
 async def create_product(
     product: ProductCreate,
@@ -94,6 +115,23 @@ async def create_product(
         
     # Convertimos modelo Pydantic a diccionario para insertar en Mongo
     product_dict = product.model_dump()
+    
+    # Generar slug si no viene o está vacío
+    if not product_dict.get("slug"):
+        base_slug = re.sub(r'[^a-z0-9]+', '-', product_dict["name"].lower()).strip('-')
+        
+        # Ensure slug uniqueness
+        slug = base_slug
+        counter = 1
+        while await db.products.find_one({"slug": slug}):
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+            
+        product_dict["slug"] = slug
+        
+    # Check manual slug collision
+    elif await db.products.find_one({"slug": product_dict["slug"]}):
+        raise HTTPException(status_code=409, detail="Slug already exists")
     
     # Insertamos
     result = await db.products.insert_one(product_dict)
@@ -114,8 +152,13 @@ async def update_product(
     if not ObjectId.is_valid(product_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
         
-    product_dict = product.model_dump()
+    product_dict = product.model_dump(exclude_unset=True)
     
+    if "slug" in product_dict:
+        collision = await db.products.find_one({"slug": product_dict["slug"], "_id": {"$ne": ObjectId(product_id)}})
+        if collision:
+            raise HTTPException(status_code=409, detail="Slug already exists")
+
     # Update Document in MongoDB
     result = await db.products.update_one(
         {"_id": ObjectId(product_id)},

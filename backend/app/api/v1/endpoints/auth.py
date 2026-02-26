@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request, Response
 from app.schemas.user import UserCreate, UserOut, UserLogin
 from app.schemas.token import Token
-from app.db import db
-from app.core.security import hash_password, verify_password, create_token, get_current_user
+from app.core.security import get_current_user
 from app.core.config import settings
+from app.core.limiter import limiter
+from app.services.auth_service import AuthService
 
 router = APIRouter()
 
@@ -18,81 +18,36 @@ router = APIRouter()
 # - POST /refresh: Obtener un nuevo Access Token usando un Refresh Token
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def register(payload: UserCreate):
-    """
-    Registrar un nuevo usuario en la base de datos.
-    1. Verifica si el email ya existe en MongoDB.
-    2. Hashea la contraseña con bcrypt (nunca se almacena plana).
-    3. Guarda los datos mínimos necesarios.
-    4. Retorna el usuario creado (sin contraseña).
-    """
-    users = db.users
-    existing = await users.find_one({"email": payload.email})
-    if existing:
-        raise HTTPException(
-            status_code=409,  # Conflict
-            detail="Email already exists"
-        )
-    
-    hashed = hash_password(payload.password)
-    user_data = {
-        "email": payload.email,
-        "password": hashed,
-        "created_at": datetime.now(timezone.utc),
-        "is_active": True,
-        # 'token_version' es una buena idea para invalidar tokens viejos si el usuario cambia contraseña
-        "token_version": 0,
-        "role": "user" # Todos los usuarios nuevos son clientes comunes por defecto
-    }
-    if payload.name:
-        user_data["name"] = payload.name
-        
-    result = await users.insert_one(user_data)
-    
-    # Retornamos UserOut.
-    # FastAPI filtrará automáticamente cualquier campo no definido en UserOut (como 'password').
-    # El ID de MongoDB (ObjectId) se convierte a string.
-    return UserOut(
-        id=str(result.inserted_id),
-        email=payload.email,
-        name=payload.name,
-        role="user"
-    )
+@limiter.limit("5/minute")
+async def register(request: Request, payload: UserCreate):
+    auth_service = AuthService()
+    return await auth_service.register_user(payload)
 
-@router.post("/login", response_model=Token)
-async def login(payload: UserLogin):
-    """
-    Autenticación y generación de JWT.
-    1. Busca usuario por email.
-    2. Verifica hash de contraseña (verify_password).
-    3. Genera dos tokens:
-       - Access Token: Validez corta (ej: 15min). Se envía en cada petición.
-       - Refresh Token: Validez larga (ej: 30 días). Se usa solo para renovar el Access Token.
-    """
-    users = db.users
-    user = await users.find_one({"email": payload.email})
+@router.post("/login", response_model=dict)
+@limiter.limit("5/minute")
+async def login(request: Request, response: Response, payload: UserLogin):
+    auth_service = AuthService()
+    tokens = await auth_service.authenticate_user(payload)
     
-    # Timing-safe comparison.
-    # Si el usuario no existe, verificamos una contraseña dummy para evitar Timing Attacks
-    # que permitan enumerar usuarios válidos midiendo tiempos de respuesta.
-    # (Aquí simplificado: verify_password maneja la seguridad).
-    if not user or not verify_password(payload.password, user["password"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        
-    if not user.get("is_active", True):
-        raise HTTPException(status_code=400, detail="Inactive user")
-        
-    user_id = str(user["_id"])
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        max_age=settings.access_token_expires_min * 60,
+        samesite="lax",
+        secure=False, # True if HTTPS
+    )
     
-    # Crear tokens con duraciones específicas desde config.py
-    access_token = create_token(user_id, settings.access_token_expires_min)
-    refresh_token = create_token(user_id, settings.refresh_token_expires_min)
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        max_age=settings.refresh_token_expires_min * 60,
+        samesite="lax",
+        secure=False,
+    )
     
-    return Token(access_token=access_token, refresh_token=refresh_token)
+    return {"message": "Login successful"}
 
 @router.get("/me", response_model=UserOut)
 async def read_users_me(current_user: dict = Depends(get_current_user)):
@@ -103,17 +58,53 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
     """
     return current_user
 
-@router.post("/refresh", response_model=Token)
-async def refresh_token(current_user: dict = Depends(get_current_user)):
-    """
-    Rotación de tokens de seguridad.
+@router.post("/refresh", response_model=dict)
+async def refresh_token(request: Request, response: Response):
+    refresh_token_cookie = request.cookies.get("refresh_token")
+    if not refresh_token_cookie:
+        raise HTTPException(status_code=401, detail="Refresh token missing")
+        
+    auth_service = AuthService()
+    # Assuming get_current_user logic handles normal token validation,
+    # Here we need a simplified subject extraction from refresh token
+    # For now, to keep it simple, we require current_user from get_current_user,
+    # but the architectural flaw here is that /refresh is called when access token expires.
+    # Therefore get_current_user will fail! I will leave it simple as you had it or modify it.
     
-    Cuando el Access Token expira (401), el cliente (frontend) debería llamar a este endpoint
-    enviando su Refresh Token vigente para obtener un par nuevo sin pedir credenciales de nuevo.
-    """
-    user_id = current_user["id"]
-    access_token = create_token(user_id, settings.access_token_expires_min)
-    # Recomendación de seguridad: Rotar también el refresh token (Refresh Token Rotation)
-    refresh_token = create_token(user_id, settings.refresh_token_expires_min)
+    # We will import security functions directly here to avoid circular logic
+    from jose import jwt, JWTError
+    try:
+        payload = jwt.decode(refresh_token_cookie, settings.jwt_secret, algorithms=[settings.jwt_alg])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    tokens = auth_service.refresh_user_token(user_id)
     
-    return Token(access_token=access_token, refresh_token=refresh_token)
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        max_age=settings.access_token_expires_min * 60,
+        samesite="lax",
+        secure=False,
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        max_age=settings.refresh_token_expires_min * 60,
+        samesite="lax",
+        secure=False,
+    )
+    
+    return {"message": "Token refreshed"}
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return {"message": "Logged out successfully"}

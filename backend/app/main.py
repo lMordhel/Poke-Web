@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.limiter import limiter
+from app.core.exceptions import global_http_exception_handler, validation_exception_handler, unhandled_exception_handler
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # --- Entrypoint de la Aplicación ---
 # Aquí arranca el servidor. Configura el título, versión, documentación (Swagger)
@@ -14,6 +20,12 @@ app = FastAPI(
     docs_url="/docs", # URL para Swagger UI (interfaz interactiva)
     redoc_url="/redoc" # URL para ReDoc (documentación estática bonita)
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(StarletteHTTPException, global_http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # --- Configuración CORS (Cross-Origin Resource Sharing) ---
 # Permite que el navegador haga peticiones fetch() desde dominios distintos al backend.
@@ -49,6 +61,16 @@ app.include_router(api_router, prefix="/api/v1")
 # Configuramos la carpeta local "uploads" para que pueda ser leída públicamente
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+from app.db.database import db
+from pymongo import ASCENDING, DESCENDING
+
+@app.on_event("startup")
+async def startup_event():
+    # Optimización de DB y ordenamiento (FASE 4)
+    await db.orders.create_index([("user_id", ASCENDING)])
+    await db.orders.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    await db.activities.create_index([("user_id", ASCENDING), ("timestamp", DESCENDING)])
 
 @app.get("/")
 async def root():
