@@ -1,5 +1,5 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, Settings, Home, Search, Heart, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Settings, Home, Search, Heart, Shield, ShieldAlert, LogOut } from 'lucide-react';
 import { adminStyles as styles } from '@/features/admin/admin.styles';
 import { clearToken } from '@/lib/axios';
 
