@@ -45,6 +45,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Permite cualquier subdominio de Vercel
     allow_credentials=True, # Permite cookies/headers de autorización
     allow_methods=["*"],    # Métodos HTTP permitidos (GET, POST, PUT, DELETE, OPTIONS)
     allow_headers=["*"],    # Cabeceras permitidas (Content-Type, Authorization...)

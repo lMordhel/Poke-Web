@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Heart, ShoppingCart, Flame, Zap, Droplets, Leaf, Sparkles, Ghost, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { productCardStyles } from './productCard.styles';
@@ -28,7 +28,15 @@ const typeColors = {
 
 const ProductCard = ({ product, showHeart = true }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(() => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (currentUser && currentUser.loggedIn) {
+      const favoritesKey = `favorites_${currentUser.email}`;
+      const favorites = JSON.parse(localStorage.getItem(favoritesKey) || '[]');
+      return favorites.some(fav => fav.id === product.id);
+    }
+    return false;
+  });
   const navigate = useNavigate();
   const TypeIcon = typeIcons[product.type] || Sparkles;
   const typeColor = typeColors[product.type] || '#A8A878';
@@ -37,17 +45,6 @@ const ProductCard = ({ product, showHeart = true }) => {
   const displayPrice = hasVariants
     ? `Desde $${Math.min(...product.variants.map(v => v.price)).toFixed(2)}`
     : `$${product.price}`;
-
-  // Verificar si el producto está en favoritos al cargar
-  useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (currentUser && currentUser.loggedIn) {
-      const favoritesKey = `favorites_${currentUser.email}`;
-      const favorites = JSON.parse(localStorage.getItem(favoritesKey) || '[]');
-      const isInFavorites = favorites.some(fav => fav.id === product.id);
-      setIsFavorite(isInFavorites);
-    }
-  }, [product.id]);
 
   const closeModal = (e) => {
     e.stopPropagation();
@@ -106,10 +103,19 @@ const ProductCard = ({ product, showHeart = true }) => {
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
         style={{ ...productCardStyles.card, cursor: 'pointer' }}
         onClick={() => {
           const dest = product.slug || product.id;
           if (dest) navigate(`/products/${dest}`);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            const dest = product.slug || product.id;
+            if (dest) navigate(`/products/${dest}`);
+          }
         }}
       >
         {product.is_new && (
@@ -131,10 +137,19 @@ const ProductCard = ({ product, showHeart = true }) => {
         )}
 
         <div
+          role="button"
+          tabIndex={0}
           style={{ ...productCardStyles.imageContainer, cursor: 'zoom-in' }}
           onClick={(e) => {
             e.stopPropagation();
             setIsModalOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsModalOpen(true);
+            }
           }}
         >
           <div style={productCardStyles.placeholderImage}>
@@ -161,7 +176,15 @@ const ProductCard = ({ product, showHeart = true }) => {
       </div>
 
       {isModalOpen && (
-        <div style={productCardStyles.modalOverlay} onClick={closeModal}>
+        <div
+          role="button"
+          tabIndex={0}
+          style={productCardStyles.modalOverlay}
+          onClick={closeModal}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'Escape') closeModal(e);
+          }}
+        >
           <div style={productCardStyles.modalContent} onClick={(e) => e.stopPropagation()}>
             <button style={productCardStyles.closeButton} onClick={closeModal}>
               <X size={24} color="#fff" />

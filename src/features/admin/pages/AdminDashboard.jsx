@@ -50,10 +50,10 @@ const AdminDashboard = () => {
                 <p>Cargando estadísticas...</p>
             ) : (
                 <div style={styles.statsGrid}>
-                    {statCards.map((stat, i) => {
+                    {statCards.map((stat) => {
                         const Icon = stat.icon;
                         return (
-                            <div key={i} style={styles.card}>
+                            <div key={stat.label} style={styles.card}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
                                         <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 8px 0', fontWeight: '500' }}>

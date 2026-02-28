@@ -3,6 +3,7 @@ import { authService } from './services/authService';
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
     return useContext(AuthContext);
 };

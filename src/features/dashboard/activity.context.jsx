@@ -62,6 +62,7 @@ export const ActivityProvider = ({ children }) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useActivity = () => {
     const context = useContext(ActivityContext);
     if (!context) {

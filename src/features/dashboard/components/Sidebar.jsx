@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as Motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,7 +13,6 @@ import {
   X
 } from 'lucide-react';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
-import { dashboardService as apiService } from '@/features/dashboard/services/dashboardService';
 import { useActivity } from '@/features/dashboard';
 import { clearToken } from '@/lib/axios';
 
@@ -45,7 +44,7 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, onClose, user, isMobile }) =>
     <>
       <AnimatePresence>
         {isMobile && isOpen && (
-          <motion.div
+          <Motion.div
             style={dashboardStyles.overlay}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -96,7 +95,7 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, onClose, user, isMobile }) =>
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <motion.button
+              <Motion.button
                 key={item.id}
                 style={{
                   ...dashboardStyles.navItem,
@@ -119,7 +118,7 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, onClose, user, isMobile }) =>
                 }}>
                   {item.label}
                 </span>
-              </motion.button>
+              </Motion.button>
             );
           })}
 
@@ -177,7 +176,7 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, onClose, user, isMobile }) =>
               </span>
             </div>
           </div>
-          <motion.button
+          <Motion.button
             style={dashboardStyles.logoutButton}
             onClick={handleLogout}
             whileHover={{ backgroundColor: '#EF444410' }}
@@ -185,7 +184,7 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, onClose, user, isMobile }) =>
           >
             <LogOut size={16} />
             Cerrar sesión
-          </motion.button>
+          </Motion.button>
         </div>
       </aside>
     </>

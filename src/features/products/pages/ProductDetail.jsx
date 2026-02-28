@@ -123,7 +123,7 @@ const ProductDetail = () => {
                             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
                                 {[product.img || product.image_url, ...product.images].filter((v, i, a) => a.indexOf(v) === i).map((imgUrl, idx) => (
                                     <button
-                                        key={idx}
+                                        key={imgUrl}
                                         onClick={() => setMainImage(imgUrl)}
                                         style={{
                                             width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', padding: 0,
@@ -177,12 +177,12 @@ const ProductDetail = () => {
                                     Tamaño / Variante
                                 </div>
                                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                    {product.variants.map((variant, idx) => {
+                                    {product.variants.map((variant) => {
                                         const isSelected = selectedVariant && selectedVariant.size === variant.size;
                                         const isOutOfStock = variant.stock === 0;
                                         return (
                                             <button
-                                                key={idx}
+                                                key={variant.size}
                                                 onClick={() => setSelectedVariant(variant)}
                                                 disabled={isOutOfStock}
                                                 style={{
@@ -194,7 +194,7 @@ const ProductDetail = () => {
                                                     fontWeight: '600',
                                                     fontSize: '14px',
                                                     cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                                                    transition: 'all 0.2s',
+                                                    transition: 'opacity 0.2s, background-color 0.2s, color 0.2s, border-color 0.2s',
                                                     opacity: isOutOfStock ? 0.6 : 1
                                                 }}
                                             >
@@ -244,7 +244,7 @@ const ProductDetail = () => {
                                         border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '16px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                                         cursor: (selectedVariant ? selectedVariant.stock : product.stock) === 0 ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s', boxShadow: (selectedVariant ? selectedVariant.stock : product.stock) > 0 ? '0 4px 14px rgba(255, 214, 0, 0.4)' : 'none'
+                                        transition: 'background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s', boxShadow: (selectedVariant ? selectedVariant.stock : product.stock) > 0 ? '0 4px 14px rgba(255, 214, 0, 0.4)' : 'none'
                                     }}
                                 >
                                     <ShoppingCart size={20} />

@@ -128,7 +128,7 @@ export const cartStyles = {
     borderRadius: '8px',
     color: '#ff4444',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'background-color 0.2s, color 0.2s, transform 0.2s, border-color 0.2s',
   },
   summarySection: {
     position: 'sticky',
@@ -204,7 +204,7 @@ export const cartStyles = {
     padding: '0.75rem',
     border: `2px solid ${colors.yellowPrimary}`,
     borderRadius: '12px',
-    transition: 'all 0.2s',
+    transition: 'background-color 0.2s, color 0.2s, transform 0.2s, border-color 0.2s',
   },
   emptyCart: {
     display: 'flex',

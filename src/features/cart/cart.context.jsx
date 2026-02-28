@@ -4,6 +4,7 @@ import { useActivity } from '@/features/dashboard/activity.context';
 
 const CartContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
     return useContext(CartContext);
 };
@@ -20,6 +21,7 @@ export const CartProvider = ({ children }) => {
             const storedCart = localStorage.getItem(cartKey);
             if (storedCart) {
                 try {
+                    // eslint-disable-next-line react-hooks/set-state-in-effect
                     setCartItems(JSON.parse(storedCart));
                 } catch (e) {
                     console.error("Error parsing cart", e);

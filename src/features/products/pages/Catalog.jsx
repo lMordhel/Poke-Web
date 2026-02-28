@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useReducer, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import ProductCard from '@/features/products/components/ProductCard/ProductCard';
 import '@/shared/styles/responsive.css';
@@ -6,21 +6,52 @@ import '@/shared/styles/spinner.css';
 import { productService as apiService } from '@/features/products/services/productService';
 import { catalogStyles } from '@/features/products/catalog.styles';
 
+const initialState = {
+  products: [],
+  types: ['Todos'],
+  selectedType: 'Todos',
+  searchQuery: '',
+  loading: true,
+  error: null
+};
+
+function catalogReducer(state, action) {
+  switch (action.type) {
+    case 'FETCH_START':
+      return { ...state, loading: true, error: null };
+    case 'FETCH_SUCCESS':
+      return {
+        ...state,
+        products: action.payload.products,
+        types: action.payload.types,
+        loading: false
+      };
+    case 'FETCH_ERROR':
+      return {
+        ...state,
+        error: action.payload,
+        products: [],
+        types: ['Todos'],
+        loading: false
+      };
+    case 'SET_FILTER':
+      return { ...state, selectedType: action.payload };
+    case 'SET_SEARCH':
+      return { ...state, searchQuery: action.payload };
+    default:
+      return state;
+  }
+}
+
 const Catalog = () => {
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [types, setTypes] = useState(['Todos']);
-  const [selectedType, setSelectedType] = useState('Todos');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [state, dispatch] = useReducer(catalogReducer, initialState);
+  const { products, types, selectedType, searchQuery, loading, error } = state;
 
   // Fetch products and types from API
   useEffect(() => {
     const fetchData = async () => {
+      dispatch({ type: 'FETCH_START' });
       try {
-        setLoading(true);
-
         // Fetch products
         const productsData = await apiService.getProducts();
         console.log('Products API response:', productsData); // Debug log
@@ -35,45 +66,42 @@ const Catalog = () => {
           console.warn('Unexpected products data structure:', productsData);
         }
 
-        setProducts(transformedProducts);
-
         // Fetch types
         const typesData = await apiService.getProductTypes();
+        let extractedTypes = ['Todos'];
         if (typesData && Array.isArray(typesData.types)) {
-          setTypes(typesData.types);
+          extractedTypes = typesData.types;
         } else if (Array.isArray(typesData)) {
-          setTypes(typesData);
+          extractedTypes = extractedTypes.concat(typesData);
         } else {
-          setTypes(['Todos']);
           console.warn('Unexpected types data structure:', typesData);
         }
 
-        setError(null);
+        // Remove duplicate 'Todos' if any
+        extractedTypes = [...new Set(extractedTypes)];
+
+        dispatch({
+          type: 'FETCH_SUCCESS',
+          payload: { products: transformedProducts, types: extractedTypes }
+        });
+
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('No se pudieron cargar los productos. Por favor, intenta más tarde.');
-
-        // Fallback to empty arrays
-        setProducts([]);
-        setTypes(['Todos']);
-      } finally {
-        setLoading(false);
+        dispatch({
+          type: 'FETCH_ERROR',
+          payload: 'No se pudieron cargar los productos. Por favor, intenta más tarde.'
+        });
       }
     };
 
     fetchData();
   }, []);
 
-  // Filter products based on type and search
-  useEffect(() => {
-    const filtered = products.filter((product) => {
-      const matchesType = selectedType === 'Todos' || product.type === selectedType;
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesType && matchesSearch;
-    });
-
-    setFilteredProducts(filtered);
-  }, [products, selectedType, searchQuery]);
+  const filteredProducts = products.filter((product) => {
+    const matchesType = selectedType === 'Todos' || product.type === selectedType;
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesType && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -116,7 +144,7 @@ const Catalog = () => {
             type="text"
             placeholder="Buscar Pokémon..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
             style={styles.searchInput}
           />
         </div>
@@ -125,7 +153,7 @@ const Catalog = () => {
           {types.map((type) => (
             <button
               key={type}
-              onClick={() => setSelectedType(type)}
+              onClick={() => dispatch({ type: 'SET_FILTER', payload: type })}
               style={{
                 ...styles.filterButton,
                 ...(selectedType === type ? styles.filterButtonActive : {}),

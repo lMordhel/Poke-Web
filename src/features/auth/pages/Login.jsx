@@ -23,7 +23,7 @@ const Login = () => {
 
     try {
       // Call backend login API
-      const response = await apiService.login({ email, password });
+      await apiService.login({ email, password });
 
       // Get user data from backend
       const userData = await apiService.getCurrentUser();
@@ -75,11 +75,12 @@ const Login = () => {
 
         <form style={styles.form} onSubmit={handleSubmit}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>
+            <label style={styles.label} htmlFor="email">
               <Mail size={18} style={styles.icon} />
               Correo electrónico
             </label>
             <input
+              id="email"
               type="email"
               style={{
                 ...styles.input,
@@ -98,11 +99,12 @@ const Login = () => {
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={styles.label}>
+            <label style={styles.label} htmlFor="password">
               <Lock size={18} style={styles.icon} />
               Contraseña
             </label>
             <input
+              id="password"
               type="password"
               style={{
                 ...styles.input,
@@ -122,8 +124,8 @@ const Login = () => {
           </div>
 
           <div style={styles.options}>
-            <label style={styles.checkboxLabel}>
-              <input type="checkbox" style={styles.checkbox} />
+            <label style={styles.checkboxLabel} htmlFor="remember">
+              <input id="remember" type="checkbox" style={styles.checkbox} />
               Recordarme
             </label>
             <Link to="/recuperar" style={styles.forgotLink}>

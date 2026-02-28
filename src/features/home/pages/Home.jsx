@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion as Motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { m as Motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { ArrowRight, Sparkles, Truck, Shield, Gift, Headphones, Star, Flame, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductCard from '@/features/products/components/ProductCard/ProductCard';

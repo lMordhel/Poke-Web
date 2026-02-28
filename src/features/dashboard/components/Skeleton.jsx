@@ -1,10 +1,10 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m as Motion } from 'framer-motion';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
 
 const Skeleton = ({ width, height, borderRadius = 12 }) => {
   return (
-    <motion.div
+    <Motion.div
       style={{
         ...dashboardStyles.skeleton,
         width,
@@ -35,7 +35,7 @@ export const SkeletonCard = () => (
 export const SkeletonStats = () => (
   <div style={dashboardStyles.statsGrid}>
     {[1, 2, 3, 4].map((i) => (
-      <div key={i} style={dashboardStyles.skeletonStatCard}>
+      <div key={`skeleton-stat-${i}`} style={dashboardStyles.skeletonStatCard}>
         <Skeleton width={48} height={48} borderRadius={12} />
         <div style={dashboardStyles.skeletonStatContent}>
           <Skeleton width={60} height={28} />
@@ -58,7 +58,7 @@ export const SkeletonOrderRow = () => (
 export const SkeletonFavorites = () => (
   <div style={dashboardStyles.favoritesGrid}>
     {[1, 2, 3, 4].map((i) => (
-      <SkeletonCard key={i} />
+      <SkeletonCard key={`skeleton-card-${i}`} />
     ))}
   </div>
 );

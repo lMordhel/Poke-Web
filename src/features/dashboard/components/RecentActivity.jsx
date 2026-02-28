@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m as Motion } from 'framer-motion';
 import { CheckCircle, Heart, Package, LogIn, ShoppingCart, LogOut, Star, UserPlus, CreditCard } from 'lucide-react';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
 import { colors } from '@/shared/styles/theme';
@@ -51,7 +51,7 @@ const RecentActivity = ({ loading = false }) => {
 
   if (loading) {
     return (
-      <motion.div
+      <Motion.div
         key="activity-loading"
         style={dashboardStyles.sectionCard}
         initial={{ opacity: 0 }}
@@ -62,7 +62,7 @@ const RecentActivity = ({ loading = false }) => {
         </div>
         <div style={dashboardStyles.activityList}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={dashboardStyles.activityItem}>
+            <div key={`activity-skel-${i}`} style={dashboardStyles.activityItem}>
               <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.grayLight, opacity: 0.5 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ width: '70%', height: 14, backgroundColor: colors.grayLight, opacity: 0.5, borderRadius: 4, marginBottom: 6 }} />
@@ -71,12 +71,12 @@ const RecentActivity = ({ loading = false }) => {
             </div>
           ))}
         </div>
-      </motion.div>
+      </Motion.div>
     );
   }
 
   return (
-    <motion.div
+    <Motion.div
       key="activity-loaded"
       style={dashboardStyles.sectionCard}
       variants={containerVariants}
@@ -98,7 +98,7 @@ const RecentActivity = ({ loading = false }) => {
             const IconComponent = config.icon;
 
             return (
-              <motion.div
+              <Motion.div
                 key={activityEvent.id}
                 style={dashboardStyles.activityItem}
                 variants={itemVariants}
@@ -119,12 +119,12 @@ const RecentActivity = ({ loading = false }) => {
                 </div>
 
                 <span style={dashboardStyles.activityTime}>{getRelativeTime(activityEvent.timestamp)}</span>
-              </motion.div>
+              </Motion.div>
             );
           })
         )}
       </div>
-    </motion.div>
+    </Motion.div>
   );
 };
 

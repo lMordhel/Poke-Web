@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m as Motion } from 'framer-motion';
 import {
   User,
   Mail,
@@ -8,10 +8,49 @@ import {
   CreditCard,
   MapPin,
   Save,
-  Check
+  Check,
+  Heart
 } from 'lucide-react';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
 import { colors } from '@/shared/styles/theme';
+
+const SettingItem = ({ icon, title, description, children }) => {
+  const IconComponent = icon;
+  return (
+    <Motion.div
+      style={dashboardStyles.settingItem}
+      whileHover={{ backgroundColor: colors.grayLight }}
+    >
+      <div style={dashboardStyles.settingIcon}>
+        <IconComponent size={18} color={colors.grayDark} />
+      </div>
+      <div style={dashboardStyles.settingContent}>
+        <span style={dashboardStyles.settingTitle}>{title}</span>
+        {description && <span style={dashboardStyles.settingDescription}>{description}</span>}
+      </div>
+      <div style={dashboardStyles.settingControl}>
+        {children}
+      </div>
+    </Motion.div>
+  );
+};
+
+const Toggle = ({ checked, onChange }) => (
+  <Motion.button
+    style={{
+      ...dashboardStyles.toggle,
+      backgroundColor: checked ? colors.yellowPrimary : colors.grayMedium,
+    }}
+    onClick={() => onChange(!checked)}
+    whileTap={{ scale: 0.95 }}
+  >
+    <Motion.div
+      style={dashboardStyles.toggleKnob}
+      animate={{ x: checked ? 20 : 0 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+    />
+  </Motion.button>
+);
 
 const SettingsSection = ({ user, loading = false }) => {
   const [saved, setSaved] = useState(false);
@@ -30,44 +69,9 @@ const SettingsSection = ({ user, loading = false }) => {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const SettingItem = ({ icon: Icon, title, description, children }) => (
-    <motion.div
-      style={dashboardStyles.settingItem}
-      whileHover={{ backgroundColor: colors.grayLight }}
-    >
-      <div style={dashboardStyles.settingIcon}>
-        <Icon size={18} color={colors.grayDark} />
-      </div>
-      <div style={dashboardStyles.settingContent}>
-        <span style={dashboardStyles.settingTitle}>{title}</span>
-        {description && <span style={dashboardStyles.settingDescription}>{description}</span>}
-      </div>
-      <div style={dashboardStyles.settingControl}>
-        {children}
-      </div>
-    </motion.div>
-  );
-
-  const Toggle = ({ checked, onChange }) => (
-    <motion.button
-      style={{
-        ...dashboardStyles.toggle,
-        backgroundColor: checked ? colors.yellowPrimary : colors.grayMedium,
-      }}
-      onClick={() => onChange(!checked)}
-      whileTap={{ scale: 0.95 }}
-    >
-      <motion.div
-        style={dashboardStyles.toggleKnob}
-        animate={{ x: checked ? 20 : 0 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      />
-    </motion.button>
-  );
-
   if (loading) {
     return (
-      <motion.div
+      <Motion.div
         style={dashboardStyles.settingsSection}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -77,7 +81,7 @@ const SettingsSection = ({ user, loading = false }) => {
         </div>
         <div style={dashboardStyles.settingsGroup}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={dashboardStyles.settingItem}>
+            <div key={`setting-skel-${i}`} style={dashboardStyles.settingItem}>
               <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: colors.grayLight, opacity: 0.5 }} />
               <div style={dashboardStyles.settingContent}>
                 <div style={{ width: 120, height: 14, backgroundColor: colors.grayLight, opacity: 0.5, borderRadius: 4, marginBottom: 6 }} />
@@ -86,12 +90,12 @@ const SettingsSection = ({ user, loading = false }) => {
             </div>
           ))}
         </div>
-      </motion.div>
+      </Motion.div>
     );
   }
 
   return (
-    <motion.div
+    <Motion.div
       style={dashboardStyles.settingsSection}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -114,7 +118,7 @@ const SettingsSection = ({ user, loading = false }) => {
             <span style={dashboardStyles.profileName}>{user?.name}</span>
           </div>
         </SettingItem>
-        
+
         <SettingItem
           icon={Mail}
           title="Email"
@@ -168,7 +172,7 @@ const SettingsSection = ({ user, loading = false }) => {
             onChange={(v) => setNotifications({ ...notifications, orders: v })}
           />
         </SettingItem>
-        
+
         <SettingItem
           icon={Bell}
           title="Promociones"
@@ -179,7 +183,7 @@ const SettingsSection = ({ user, loading = false }) => {
             onChange={(v) => setNotifications({ ...notifications, promotions: v })}
           />
         </SettingItem>
-        
+
         <SettingItem
           icon={Heart}
           title="Favoritos"
@@ -199,48 +203,48 @@ const SettingsSection = ({ user, loading = false }) => {
           title="Seguridad"
           description="Gestiona tu contraseña"
         >
-          <motion.button
+          <Motion.button
             style={dashboardStyles.settingAction}
             whileHover={{ backgroundColor: colors.grayMedium }}
             whileTap={{ scale: 0.98 }}
             onClick={() => alert('Función de seguridad - Próximamente')}
           >
             Gestionar
-          </motion.button>
+          </Motion.button>
         </SettingItem>
-        
+
         <SettingItem
           icon={CreditCard}
           title="Métodos de Pago"
           description="Gestiona tus tarjetas"
         >
-          <motion.button
+          <Motion.button
             style={dashboardStyles.settingAction}
             whileHover={{ backgroundColor: colors.grayMedium }}
             whileTap={{ scale: 0.98 }}
             onClick={() => alert('Métodos de pago - Próximamente')}
           >
             Ver
-          </motion.button>
+          </Motion.button>
         </SettingItem>
-        
+
         <SettingItem
           icon={MapPin}
           title="Direcciones"
           description="Gestiona tus direcciones"
         >
-          <motion.button
+          <Motion.button
             style={dashboardStyles.settingAction}
             whileHover={{ backgroundColor: colors.grayMedium }}
             whileTap={{ scale: 0.98 }}
             onClick={() => alert('Direcciones - Próximamente')}
           >
             Editar
-          </motion.button>
+          </Motion.button>
         </SettingItem>
       </div>
 
-      <motion.button
+      <Motion.button
         style={dashboardStyles.saveButton}
         onClick={handleSave}
         whileHover={{ backgroundColor: colors.yellowDark }}
@@ -257,8 +261,8 @@ const SettingsSection = ({ user, loading = false }) => {
             Guardar Cambios
           </>
         )}
-      </motion.button>
-    </motion.div>
+      </Motion.button>
+    </Motion.div>
   );
 };
 

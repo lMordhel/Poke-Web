@@ -1,11 +1,13 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m as Motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Trash2 } from 'lucide-react';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
 import { colors } from '@/shared/styles/theme';
 
-const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
+const EMPTY_ARRAY = [];
+
+const FavoritesSection = ({ favorites = EMPTY_ARRAY, onRemove, loading = false }) => {
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -25,7 +27,7 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
 
   if (loading) {
     return (
-      <motion.div
+      <Motion.div
         style={dashboardStyles.favoritesSection}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -35,12 +37,12 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
         </div>
         <div className="favorites-grid" style={dashboardStyles.favoritesGrid}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={dashboardStyles.favoriteCard}>
-              <div style={{ 
-                width: '100%', 
-                aspectRatio: '1', 
-                borderRadius: 12, 
-                backgroundColor: colors.grayLight, 
+            <div key={`fav-skel-${i}`} style={dashboardStyles.favoriteCard}>
+              <div style={{
+                width: '100%',
+                aspectRatio: '1',
+                borderRadius: 12,
+                backgroundColor: colors.grayLight,
                 opacity: 0.5,
                 marginBottom: 12,
               }} />
@@ -49,12 +51,12 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
             </div>
           ))}
         </div>
-      </motion.div>
+      </Motion.div>
     );
   }
 
   return (
-    <motion.div
+    <Motion.div
       style={dashboardStyles.favoritesSection}
       variants={containerVariants}
       initial="hidden"
@@ -68,7 +70,7 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
       </div>
 
       {favorites.length === 0 ? (
-        <motion.div
+        <Motion.div
           style={dashboardStyles.emptyState}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -82,18 +84,18 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
             <ShoppingBag size={16} />
             Ver Catálogo
           </Link>
-        </motion.div>
+        </Motion.div>
       ) : (
-        <motion.div
+        <Motion.div
           className="favorites-grid"
           style={dashboardStyles.favoritesGrid}
         >
           {favorites.map((product) => (
-            <motion.div
+            <Motion.div
               key={product.id}
               style={dashboardStyles.favoriteCard}
               variants={cardVariants}
-              whileHover={{ 
+              whileHover={{
                 y: -4,
                 boxShadow: '0 8px 20px -4px rgba(0,0,0,0.12)',
               }}
@@ -104,7 +106,7 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
                   alt={product.name}
                   style={dashboardStyles.favoriteImage}
                 />
-                <motion.button
+                <Motion.button
                   style={dashboardStyles.removeButton}
                   onClick={(e) => {
                     e.preventDefault();
@@ -114,32 +116,32 @@ const FavoritesSection = ({ favorites = [], onRemove, loading = false }) => {
                   whileTap={{ scale: 0.9 }}
                 >
                   <Trash2 size={14} />
-                </motion.button>
+                </Motion.button>
                 {product.isNew && (
                   <span style={dashboardStyles.newBadge}>Nuevo</span>
                 )}
               </div>
-              
+
               <div style={dashboardStyles.favoriteInfo}>
                 <h3 style={dashboardStyles.favoriteName}>{product.name}</h3>
                 <div style={dashboardStyles.favoriteMeta}>
                   <span style={dashboardStyles.favoriteType}>{product.type}</span>
                   <span style={dashboardStyles.favoritePrice}>${product.price}</span>
                 </div>
-                <motion.button
+                <Motion.button
                   style={dashboardStyles.addToCartButton}
                   whileHover={{ backgroundColor: colors.yellowDark }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <ShoppingBag size={14} />
                   Añadir
-                </motion.button>
+                </Motion.button>
               </div>
-            </motion.div>
+            </Motion.div>
           ))}
-        </motion.div>
+        </Motion.div>
       )}
-    </motion.div>
+    </Motion.div>
   );
 };
 

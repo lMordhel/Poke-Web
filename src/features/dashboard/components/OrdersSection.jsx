@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as Motion, AnimatePresence } from 'framer-motion';
 import {
   Package,
   Truck,
@@ -28,7 +28,9 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('es-ES', options);
 };
 
-const OrdersSection = ({ orders = [], loading = false }) => {
+const EMPTY_ARRAY = [];
+
+const OrdersSection = ({ orders = EMPTY_ARRAY, loading = false }) => {
   const [expandedOrders, setExpandedOrders] = useState({});
 
   const toggleOrder = (orderId) => {
@@ -57,7 +59,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
 
   if (loading) {
     return (
-      <motion.div
+      <Motion.div
         key="orders-loading"
         style={dashboardStyles.sectionCard}
         initial={{ opacity: 0 }}
@@ -68,7 +70,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
         </div>
         <div style={dashboardStyles.ordersList}>
           {[1, 2, 3].map((i) => (
-            <div key={i} style={dashboardStyles.orderRow}>
+            <div key={`order-skel-${i}`} style={dashboardStyles.orderRow}>
               <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: colors.grayLight, opacity: 0.5 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ width: 100, height: 14, backgroundColor: colors.grayLight, opacity: 0.5, borderRadius: 4, marginBottom: 6 }} />
@@ -77,12 +79,12 @@ const OrdersSection = ({ orders = [], loading = false }) => {
             </div>
           ))}
         </div>
-      </motion.div>
+      </Motion.div>
     );
   }
 
   return (
-    <motion.div
+    <Motion.div
       key="orders-loaded"
       style={dashboardStyles.sectionCard}
       variants={containerVariants}
@@ -98,7 +100,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
 
       <div style={dashboardStyles.ordersList}>
         {orders.length === 0 ? (
-          <motion.div
+          <Motion.div
             style={dashboardStyles.emptyState}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -111,7 +113,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
             <Link to="/catalogo" style={dashboardStyles.browseButton}>
               Ver Catálogo
             </Link>
-          </motion.div>
+          </Motion.div>
         ) : (
           orders.slice(0, 3).map((order) => {
             const status = statusConfig[order.status] || statusConfig.pending;
@@ -122,7 +124,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
             const shortId = order.id ? order.id.slice(-5).toUpperCase() : 'UNKNOWN';
 
             return (
-              <motion.div
+              <Motion.div
                 key={order.id}
                 style={{
                   backgroundColor: '#fff',
@@ -183,7 +185,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
                 {/* Contenido Expandible Animado */}
                 <AnimatePresence>
                   {isExpanded && (
-                    <motion.div
+                    <Motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -196,7 +198,7 @@ const OrdersSection = ({ orders = [], loading = false }) => {
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                           {order.items?.map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+                            <div key={`orderitem-${item.id || item.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
 
                               <div style={{ width: '60px', height: '60px', borderRadius: '8px', backgroundColor: '#f3f4f6', padding: '4px', flexShrink: 0 }}>
                                 <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -229,16 +231,16 @@ const OrdersSection = ({ orders = [], loading = false }) => {
                           ))}
                         </div>
                       </div>
-                    </motion.div>
+                    </Motion.div>
                   )}
                 </AnimatePresence>
 
-              </motion.div>
+              </Motion.div>
             );
           })
         )}
       </div>
-    </motion.div>
+    </Motion.div>
   );
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m as Motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import Sidebar from '../Sidebar';
 import Header from '../Header';
@@ -9,12 +9,121 @@ import RecentActivity from '../RecentActivity';
 import FavoritesSection from '../FavoritesSection';
 import SettingsSection from '../SettingsSection';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
-import { dashboardService as apiService } from '@/features/dashboard/services/dashboardService';
 import { authService } from '@/features/auth/services/authService';
 import { cartService } from '@/features/cart/services/cartService';
 import { clearToken } from '@/lib/axios';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/shared/styles/theme';
+
+const DashboardContent = ({ activeTab, user, favorites, orders, loading, handleRemoveFavorite }) => {
+  switch (activeTab) {
+    case 'overview':
+      return (
+        <Motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div style={dashboardStyles.welcomeSection}>
+            <div style={dashboardStyles.welcomeCard}>
+              <div style={dashboardStyles.welcomeContent}>
+                <div style={dashboardStyles.welcomeLeft}>
+                  <div style={dashboardStyles.welcomeAvatar}>
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div>
+                    <h1 style={dashboardStyles.welcomeTitle}>
+                      Bienvenido,{' '}
+                      <span style={dashboardStyles.welcomeHighlight}>{user?.name?.split(' ')[0]}</span>
+                    </h1>
+                    <p style={dashboardStyles.welcomeSubtitle}>
+                      Aquí está un resumen de tu actividad reciente
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/catalogo"
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: colors.yellowPrimary,
+                    borderRadius: '12px',
+                    fontWeight: '600',
+                    color: colors.black,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  Ver Catálogo
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <StatsCards
+            favoritesCount={favorites.length}
+            orders={orders}
+            loading={loading}
+          />
+
+          <div className="grid-2col" style={dashboardStyles.grid2Col}>
+            <OrdersSection orders={orders} loading={loading} />
+            <RecentActivity loading={loading} />
+          </div>
+        </Motion.div>
+      );
+
+    case 'orders':
+      return (
+        <Motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <StatsCards
+            favoritesCount={favorites.length}
+            orders={orders}
+            loading={loading}
+          />
+          <OrdersSection orders={orders} loading={loading} />
+        </Motion.div>
+      );
+
+    case 'favorites':
+      return (
+        <Motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <FavoritesSection
+            favorites={favorites}
+            onRemove={handleRemoveFavorite}
+            loading={loading}
+          />
+        </Motion.div>
+      );
+
+    case 'settings':
+      return (
+        <Motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <SettingsSection
+            user={user}
+            loading={loading}
+          />
+        </Motion.div>
+      );
+
+    default:
+      return null;
+  }
+};
+
 
 const DashboardLayout = () => {
   const [user, setUser] = useState(null);
@@ -114,114 +223,7 @@ const DashboardLayout = () => {
     window.dispatchEvent(new CustomEvent('favoritesUpdated'));
   };
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div style={dashboardStyles.welcomeSection}>
-              <div style={dashboardStyles.welcomeCard}>
-                <div style={dashboardStyles.welcomeContent}>
-                  <div style={dashboardStyles.welcomeLeft}>
-                    <div style={dashboardStyles.welcomeAvatar}>
-                      {user?.name?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                    <div>
-                      <h1 style={dashboardStyles.welcomeTitle}>
-                        Bienvenido,{' '}
-                        <span style={dashboardStyles.welcomeHighlight}>{user?.name?.split(' ')[0]}</span>
-                      </h1>
-                      <p style={dashboardStyles.welcomeSubtitle}>
-                        Aquí está un resumen de tu actividad reciente
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    to="/catalogo"
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: colors.yellowPrimary,
-                      borderRadius: '12px',
-                      fontWeight: '600',
-                      color: colors.black,
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    Ver Catálogo
-                  </Link>
-                </div>
-              </div>
-            </div>
 
-            <StatsCards
-              favoritesCount={favorites.length}
-              orders={orders}
-              loading={loading}
-            />
-
-            <div className="grid-2col" style={dashboardStyles.grid2Col}>
-              <OrdersSection orders={orders} loading={loading} />
-              <RecentActivity loading={loading} />
-            </div>
-          </motion.div>
-        );
-
-      case 'orders':
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <StatsCards
-              favoritesCount={favorites.length}
-              orders={orders}
-              loading={loading}
-            />
-            <OrdersSection orders={orders} loading={loading} />
-          </motion.div>
-        );
-
-      case 'favorites':
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <FavoritesSection
-              favorites={favorites}
-              onRemove={handleRemoveFavorite}
-              loading={loading}
-            />
-          </motion.div>
-        );
-
-      case 'settings':
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <SettingsSection
-              user={user}
-              loading={loading}
-            />
-          </motion.div>
-        );
-
-      default:
-        return null;
-    }
-  };
 
   return (
     <div style={dashboardStyles.layout}>
@@ -254,7 +256,14 @@ const DashboardLayout = () => {
           padding: isMobile ? '16px' : '24px',
         }}>
           <div style={dashboardStyles.content}>
-            {renderContent()}
+            <DashboardContent
+              activeTab={activeTab}
+              user={user}
+              favorites={favorites}
+              orders={orders}
+              loading={loading}
+              handleRemoveFavorite={handleRemoveFavorite}
+            />
           </div>
         </main>
       </div>

@@ -73,11 +73,12 @@ const Register = () => {
 
         <form style={styles.form} onSubmit={handleSubmit}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>
+            <label style={styles.label} htmlFor="name">
               <User size={18} style={styles.icon} />
               Nombre completo
             </label>
             <input
+              id="name"
               type="text"
               name="name"
               style={styles.input}
@@ -89,11 +90,12 @@ const Register = () => {
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={styles.label}>
+            <label style={styles.label} htmlFor="email">
               <Mail size={18} style={styles.icon} />
               Correo electrónico
             </label>
             <input
+              id="email"
               type="email"
               name="email"
               style={styles.input}
@@ -106,11 +108,12 @@ const Register = () => {
 
           <div style={styles.row}>
             <div style={styles.inputGroup}>
-              <label style={styles.label}>
+              <label style={styles.label} htmlFor="password">
                 <Lock size={18} style={styles.icon} />
                 Contraseña
               </label>
               <input
+                id="password"
                 type="password"
                 name="password"
                 style={styles.input}
@@ -123,11 +126,12 @@ const Register = () => {
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={styles.label}>
+            <label style={styles.label} htmlFor="confirmPassword">
               <CheckCircle size={18} style={styles.icon} />
               Confirmar contraseña
             </label>
             <input
+              id="confirmPassword"
               type="password"
               name="confirmPassword"
               style={{

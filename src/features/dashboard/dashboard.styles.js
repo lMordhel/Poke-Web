@@ -87,7 +87,7 @@ export const dashboardStyles = {
     padding: '12px 16px',
     borderRadius: '12px',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
     border: 'none',
     backgroundColor: 'transparent',
     width: '100%',
@@ -161,7 +161,7 @@ export const dashboardStyles = {
     fontSize: '14px',
     fontWeight: '500',
     color: colors.redError,
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   header: {
@@ -230,7 +230,7 @@ export const dashboardStyles = {
     fontSize: '14px',
     color: colors.black,
     outline: 'none',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   notificationButton: {
@@ -358,7 +358,7 @@ export const dashboardStyles = {
     padding: '20px',
     boxShadow: colors.shadowSm,
     border: `1px solid ${colors.grayMedium}`,
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   statCardInner: {
@@ -447,7 +447,7 @@ export const dashboardStyles = {
     padding: '14px',
     backgroundColor: colors.grayLight,
     borderRadius: '12px',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   orderIcon: {
@@ -505,7 +505,7 @@ export const dashboardStyles = {
     gap: '12px',
     padding: '12px',
     borderRadius: '10px',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   activityIcon: {
@@ -568,7 +568,7 @@ export const dashboardStyles = {
     padding: '14px',
     boxShadow: colors.shadowSm,
     border: `1px solid ${colors.grayMedium}`,
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   favoriteImageWrapper: {
@@ -661,7 +661,7 @@ export const dashboardStyles = {
     color: colors.black,
     cursor: 'pointer',
     marginTop: '8px',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   emptyState: {
@@ -746,7 +746,7 @@ export const dashboardStyles = {
     padding: '14px 12px',
     borderRadius: '12px',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   settingIcon: {
@@ -844,7 +844,7 @@ export const dashboardStyles = {
     fontWeight: '600',
     color: colors.grayDark,
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   saveButton: {
@@ -862,7 +862,7 @@ export const dashboardStyles = {
     fontWeight: '700',
     color: colors.black,
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
 
   overlay: {
@@ -966,7 +966,7 @@ export const dashboardStyles = {
     fontSize: '14px',
     color: colors.grayDark,
     cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    transition: 'background-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
     textAlign: 'left',
     textDecoration: 'none',
   },
@@ -987,7 +987,7 @@ export const dashboardStyles = {
     gap: '12px',
     padding: '12px 18px',
     cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    transition: 'background-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
   },
 
   notificationDot: {
