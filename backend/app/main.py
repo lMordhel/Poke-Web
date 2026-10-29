@@ -64,6 +64,7 @@ os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 from app.db.database import db
+from app.core.migrations import create_unique_user_email_index
 from pymongo import ASCENDING, DESCENDING
 
 async def create_indexes(database) -> None:
@@ -79,7 +80,10 @@ async def create_indexes(database) -> None:
 
     # S9: one account per email. The unique index also rejects the second of two
     # concurrent registrations that both pass the application-level pre-check (S10).
-    await database.users.create_index([("email", ASCENDING)], unique=True)
+    # S16: a database that already holds duplicated emails cannot get this index,
+    # so the startup fails with the duplicate count and the repair command instead
+    # of a bare DuplicateKeyError.
+    await create_unique_user_email_index(database.users)
 
 @app.on_event("startup")
 async def startup_event():
