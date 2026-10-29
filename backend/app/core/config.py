@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -31,6 +33,31 @@ class Settings(BaseSettings):
     access_token_expires_min: int = 15
     # Tiempo de vida del token de refresco (largo para usabilidad, permite "recordar sesión", ej: 30 días)
     refresh_token_expires_min: int = 43200
+
+    # --- Entorno de ejecución ---
+    # "local" habilita http://localhost (cookies sin Secure, CORS local).
+    # "production" exige HTTPS: las cookies de sesión se marcan Secure.
+    environment: Literal["local", "production"] = "local"
+
+    # --- CORS ---
+    # Lista explícita de orígenes autorizados, separados por coma. No hay
+    # comodines ni regex: un origen que no aparezca aquí no recibe cabeceras CORS.
+    cors_origins: str = (
+        "http://localhost:3000,"
+        "http://localhost:5173,"
+        "http://127.0.0.1:3000,"
+        "http://127.0.0.1:5173"
+    )
+
+    @property
+    def cors_allow_origins(self) -> list[str]:
+        """La lista de CORS_ORIGINS ya normalizada, lista para CORSMiddleware."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def cookies_secure(self) -> bool:
+        """Secure solo donde exista HTTPS: en local las cookies deben viajar por http."""
+        return self.environment == "production"
 
     # Configuración de Pydantic para leer el archivo .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

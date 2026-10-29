@@ -29,15 +29,11 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # --- Configuración CORS (Cross-Origin Resource Sharing) ---
 # Permite que el navegador haga peticiones fetch() desde dominios distintos al backend.
-# En desarrollo, permitimos localhost:3000 (React/Next) y localhost:5173 (Vite).
-# En producción, esto debe ser una lista estricta de dominios confiables.
+# La lista es explícita y vive en configuración (CORS_ORIGINS): no hay comodines ni
+# regex por patrón, porque un patrón abierto deja entrar a cualquier despliegue ajeno.
+# Para agregar un origen, se declara en CORS_ORIGINS del .env.
 
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",  # Vite default port
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-]
+origins = settings.cors_allow_origins
 
 # El middleware CORS intercepta cada petición y añade cabeceras como:
 # Access-Control-Allow-Origin: http://localhost:5173
@@ -45,7 +41,6 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Permite cualquier subdominio de Vercel
     allow_credentials=True, # Permite cookies/headers de autorización
     allow_methods=["*"],    # Métodos HTTP permitidos (GET, POST, PUT, DELETE, OPTIONS)
     allow_headers=["*"],    # Cabeceras permitidas (Content-Type, Authorization...)

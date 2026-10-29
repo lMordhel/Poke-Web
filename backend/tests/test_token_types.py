@@ -33,6 +33,10 @@ class FakeUserRepository:
     async def get_by_email(self, email):
         return self.user
 
+    async def get_by_id(self, user_id):
+        # /auth/refresh resolves the account behind the token (S13).
+        return self.user if self.user else {"is_active": True}
+
     async def create(self, user_data):
         raise AssertionError("create should not be called")
 

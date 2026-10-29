@@ -1,4 +1,5 @@
 from typing import Optional
+from bson import ObjectId
 from app.schemas.user import UserCreate
 from app.db import db
 from datetime import datetime, timezone
@@ -9,6 +10,12 @@ class UserRepository:
 
     async def get_by_email(self, email: str) -> Optional[dict]:
         return await self.collection.find_one({"email": email})
+
+    async def get_by_id(self, user_id: str) -> Optional[dict]:
+        """Busca por _id validando el formato antes de consultar Mongo."""
+        if not ObjectId.is_valid(user_id):
+            return None
+        return await self.collection.find_one({"_id": ObjectId(user_id)})
 
     async def create(self, user_data: dict) -> dict:
         result = await self.collection.insert_one(user_data)

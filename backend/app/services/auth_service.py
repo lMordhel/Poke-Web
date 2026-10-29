@@ -14,6 +14,7 @@ from app.core.security import (
 from app.core.config import settings
 
 EMAIL_ALREADY_EXISTS = "Email already exists"
+INVALID_REFRESH_TOKEN = "Invalid refresh token"
 
 
 def _email_conflict() -> HTTPException:
@@ -79,7 +80,16 @@ class AuthService:
         
         return Token(access_token=access_token, refresh_token=refresh_token)
 
-    def refresh_user_token(self, user_id: str) -> Token:
+    async def refresh_user_token(self, user_id: str) -> Token:
+        """Acuña tokens nuevos solo para una cuenta que siga existiendo y activa (S13)."""
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None or not user.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=INVALID_REFRESH_TOKEN,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         access_token = create_token(user_id, settings.access_token_expires_min, ACCESS_TOKEN_TYPE)
         refresh_token = create_token(user_id, settings.refresh_token_expires_min, REFRESH_TOKEN_TYPE)
         return Token(access_token=access_token, refresh_token=refresh_token)

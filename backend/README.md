@@ -60,7 +60,7 @@ backend/
 
 # 🔐 Autenticación y Autorización
 
-- **JSON Web Tokens (JWT)**: Los usuarios se autentican y reciben un *Access Token* válido por un tiempo definido.
+- **JSON Web Tokens (JWT)**: Los usuarios se autentican y reciben un *Access Token* válido por un tiempo definido. Access y refresh tokens declaran su tipo (`type: access|refresh`) y `/auth/refresh` solo acepta refresh tokens de cuentas que sigan existiendo y activas; si la cuenta fue borrada o desactivada responde 401 y borra la sesión del navegador.
 - **Hashing Seguros**: Las contraseñas de los usuarios nunca se guardan en texto plano; se utiliza el algoritmo **Bcrypt** con "salts" aleatorios para protección de credenciales en la DB.
 - **Dependencias Inyectadas (DI)**: Se emplea el sistema de DI de FastAPI (`Depends`) en las rutas protegidas para extraer, verificar e inyectar automáticamente al usuario actual autenticado.
 - **Roles y Permisos**: El estado del token dicta el nivel de acceso (por ejemplo, validando si un token pertenece a un usuario estándar o a un Administrador para el CRUD de productos).
@@ -69,7 +69,7 @@ backend/
 
 # 🔄 Middleware, CORS y Manejo de Errores
 
-- **CORS (Cross-Origin Resource Sharing)**: Configurado estrictamente en `main.py` para permitir peticiones únicamente desde orígenes de Frontend de confianza (por ejemplo puertos locales de Vite o React).
+- **CORS (Cross-Origin Resource Sharing)**: Configurado estrictamente en `main.py` a partir de `CORS_ORIGINS` en la configuración: solo los orígenes declarados explícitamente reciben cabeceras CORS, sin comodines por patrón.
 - **Manejador de Excepciones Global**: Errores nativos (`StarletteHTTPException`), validaciones fallidas de cuerpo (`RequestValidationError`) o abusos de cuota (`RateLimitExceeded`) son capturados de forma centralizada, devolviendo payloads JSON estructurados legibles por el cliente.
 - **Rate Limiting**: Restricciones de peticiones por minuto para prevenir ataques DoS básicos o escaneos abusivos (ej: protección en endpoints de Login).
 
@@ -119,10 +119,22 @@ pip install -r requirements.txt
 **4. Configurar Variables de Entorno**
 Crear el archivo `.env` en base a requerimientos (ejemplo):
 ```env
-MONGODB_URL=mongodb://localhost:27017
-SERVER_PORT=8000
-JWT_SECRET=tu_clave_secreta_super_segura_super_secreta_mega_secreta_ultra_segura_mega_ultra_secreta 
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB=webpoke
+JWT_SECRET=tu_clave_secreta_super_segura_super_secreta_mega_secreta_ultra_segura_mega_ultra_secreta
+ENVIRONMENT=local
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
+
+Dos variables gobiernan el comportamiento entre entornos:
+
+- **`ENVIRONMENT`** — `local` (por defecto) o `production`. En `local` las cookies de sesión
+  viajan sin `Secure` para funcionar sobre `http://localhost`; en `production` se marcan
+  `Secure`, es decir, el navegador solo las envía por HTTPS.
+- **`CORS_ORIGINS`** — lista explícita de orígenes autorizados, separados por coma. No hay
+  comodines ni regex por patrón: un origen que no esté en esta lista no recibe cabeceras CORS
+  y el navegador bloquea la respuesta. Al desplegar el frontend en otro dominio hay que
+  agregarlo aquí.
 
 **5. Ejecutar la Aplicación**
 ```bash
