@@ -4,7 +4,13 @@ from pymongo.errors import DuplicateKeyError
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.schemas.token import Token
-from app.core.security import hash_password, verify_password, create_token
+from app.core.security import (
+    ACCESS_TOKEN_TYPE,
+    REFRESH_TOKEN_TYPE,
+    hash_password,
+    verify_password,
+    create_token,
+)
 from app.core.config import settings
 
 EMAIL_ALREADY_EXISTS = "Email already exists"
@@ -68,12 +74,12 @@ class AuthService:
             
         user_id = str(user["_id"])
         
-        access_token = create_token(user_id, settings.access_token_expires_min)
-        refresh_token = create_token(user_id, settings.refresh_token_expires_min)
+        access_token = create_token(user_id, settings.access_token_expires_min, ACCESS_TOKEN_TYPE)
+        refresh_token = create_token(user_id, settings.refresh_token_expires_min, REFRESH_TOKEN_TYPE)
         
         return Token(access_token=access_token, refresh_token=refresh_token)
 
     def refresh_user_token(self, user_id: str) -> Token:
-        access_token = create_token(user_id, settings.access_token_expires_min)
-        refresh_token = create_token(user_id, settings.refresh_token_expires_min)
+        access_token = create_token(user_id, settings.access_token_expires_min, ACCESS_TOKEN_TYPE)
+        refresh_token = create_token(user_id, settings.refresh_token_expires_min, REFRESH_TOKEN_TYPE)
         return Token(access_token=access_token, refresh_token=refresh_token)

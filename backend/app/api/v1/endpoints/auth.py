@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Request, Response
 from app.schemas.user import UserCreate, UserOut, UserLogin
 from app.schemas.token import Token
-from app.core.security import get_current_user
+from app.core.security import get_current_user, REFRESH_TOKEN_TYPE
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.services.auth_service import AuthService
@@ -65,20 +65,19 @@ async def refresh_token(request: Request, response: Response):
         raise HTTPException(status_code=401, detail="Refresh token missing")
         
     auth_service = AuthService()
-    # Assuming get_current_user logic handles normal token validation,
-    # Here we need a simplified subject extraction from refresh token
-    # For now, to keep it simple, we require current_user from get_current_user,
-    # but the architectural flaw here is that /refresh is called when access token expires.
-    # Therefore get_current_user will fail! I will leave it simple as you had it or modify it.
-    
-    # We will import security functions directly here to avoid circular logic
+
     from jose import jwt, JWTError
     try:
         payload = jwt.decode(refresh_token_cookie, settings.jwt_secret, algorithms=[settings.jwt_alg])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
     except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    # Un access token (15 min) no puede canjearse por un refresh token de 30 días.
+    if payload.get("type") != REFRESH_TOKEN_TYPE:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    user_id: str = payload.get("sub")
+    if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     tokens = auth_service.refresh_user_token(user_id)

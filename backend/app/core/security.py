@@ -83,7 +83,11 @@ def verify_password(password: str, hashed: str) -> bool:
     hashed_bytes = hashed.encode('utf-8')
     return bcrypt.checkpw(p_bytes, hashed_bytes)
 
-def create_token(subject: str, minutes: int):
+ACCESS_TOKEN_TYPE = "access"
+REFRESH_TOKEN_TYPE = "refresh"
+
+
+def create_token(subject: str, minutes: int, token_type: str = ACCESS_TOKEN_TYPE):
     """
     Genera un Token JWT (JSON Web Token).
     La clave secreta (settings.jwt_secret) garantiza que el token no ha sido modificado.
@@ -97,7 +101,8 @@ def create_token(subject: str, minutes: int):
     to_encode = {
         "sub": subject,
         "exp": expire,
-        "iat": datetime.now(timezone.utc)
+        "iat": datetime.now(timezone.utc),
+        "type": token_type
     }
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_alg)
 
