@@ -44,8 +44,8 @@ S16. Si la base ya tiene emails duplicados, el arranque falla con un mensaje acc
 - T3 (S9-S10) — Índice único en `users.email` y `DuplicateKeyError` → 409. Commit: 0c1fc2a.
 - T3b (S13, decisión pendiente) — Qué hacer si la base ya tiene emails duplicados: `create_index(unique=True)` falla al arrancar y la API no levanta. Opciones: script de limpieza previo documentado, o degradar con log explícito.
 - T4 (S11-S12) — Claim `type` en JWT y verificación en `/auth/refresh`. Commit: 7279f84.
-- T5 (S14-S15) — Sanear `long_description` en el servidor con allowlist (`nh3`), al escribir y al leer el detalle.
-- T3b (S16) — Diagnóstico accionable al crear el índice único si hay duplicados + script de reparación idempotente.
+- T5 (S14-S15) — Sanear `long_description` en el servidor con allowlist (`nh3`), al escribir y al leer el detalle. Commit: 2fbde41.
+- T3b (S16) — Diagnóstico accionable al crear el índice único si hay duplicados + script de reparación idempotente. Commit: 96a94fe.
 - T6 — Cookies `secure` por entorno, CORS con lista explícita, quitar regex `vercel.app`.
 - T7 — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` dependen del backend, no de `localStorage`.
 - T8 — Refresh real en `apiClient` (401 → refresh → reintento → logout limpio).
@@ -74,5 +74,9 @@ GREEN con implementación restaurada: `20 passed`. Backend: `import app.main` OK
 Nota: el worker delegado no pudo ejecutar tests (runner bash/WSL roto en ese momento); escribió código y tests, la verificación completa la hizo el orquestador.
 
 E3 (evidencia, T4): RED `ImportError: cannot import name 'ACCESS_TOKEN_TYPE' from 'app.core.security'`. GREEN: `26 passed`. Backend: `import app.main` OK.
+
+E4 (evidencia, T5): RED `ModuleNotFoundError: No module named 'app.core.sanitize'` (verificado con `git stash push -u`). GREEN: `53 passed`. Smoke del saneador: `<script>alert(1)</script><img src=x onerror=alert(1)>` → `<p>x</p>`; `href="javascript:..."` → `<a>click</a>`; `style`/`data-*`/`onclick` eliminados. Se corrigió un `ValueError` de nh3: `rel` no puede estar en `attributes` cuando `link_rel` está activo (nh3 lo inyecta solo).
+
+E5 (evidencia, T3b): RED `ModuleNotFoundError: No module named 'app.core.migrations'`. GREEN: `65 passed`. Smoke: `plan_email_dedupe` conserva la cuenta más antigua y marca la nueva para borrar; `python -m scripts.dedupe_emails --help` funciona sin `JWT_SECRET`; el mensaje de arranque imprime el comando exacto de reparación.
 
 L3 (hallazgo P0 durante T1, verbatim del entorno): `RuntimeError: Form data requires "python-multipart" to be installed.` — `backend/requirements.txt` no incluía `python-multipart` y `products.py` usa `File(...)`, así que una instalación limpia no podía importar la app. Corregido en el mismo commit.
