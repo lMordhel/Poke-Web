@@ -23,22 +23,20 @@ const Cart = () => {
     setIsProcessing(true);
     try {
       // 1. Await creating order via Real API 
+      // El servidor decide el precio: aquí solo viaja QUÉ se compra y CUÁNTO.
+      // `total` se envía únicamente para detectar un carrito con precios viejos.
       const orderData = {
         total: cartTotal,
         items: cartItems.map(item => ({
           id: item.id.toString(),
-          name: item.name,
-          price: parseFloat(item.price),
           quantity: item.quantity,
-          type: item.type,
-          img: item.img,
           size: item.size || null
         }))
       };
-      await apiService.createOrder(orderData);
+      const order = await apiService.createOrder(orderData);
 
       // 2. Await activity logic
-      await logActivity('purchase', 'Compra completada', `Pedido por un total de $${cartTotal.toFixed(2)} procesado exitosamente`);
+      await logActivity('purchase', 'Compra completada', `Pedido por un total de $${Number(order.total).toFixed(2)} procesado exitosamente`);
 
       clearCart();
 
@@ -64,6 +62,17 @@ const Cart = () => {
       });
     } catch (error) {
       console.error('Error during checkout:', error);
+
+      // 409 = el catálogo cambió desde que se armó el carrito (precio o stock).
+      if (error.status === 409) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Tu carrito cambió',
+          text: 'Algún producto cambió de precio o se quedó sin stock. Revisa el carrito y vuelve a intentarlo.',
+        });
+        return;
+      }
+
       Swal.fire({
         icon: 'error',
         title: 'Oops...',

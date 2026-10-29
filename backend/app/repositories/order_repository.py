@@ -4,9 +4,29 @@ from bson import ObjectId
 from datetime import datetime, timezone
 
 class OrderRepository:
-    def __init__(self):
-        self.collection = db.orders
-        self.products = db.products
+    def __init__(self, orders=None, products=None):
+        # Inyectables para poder probar sin MongoDB.
+        self.collection = orders if orders is not None else db.orders
+        self.products = products if products is not None else db.products
+
+    async def get_products_by_ids(self, product_ids: List[str]) -> List[dict]:
+        """Trae los productos reales del catálogo en una sola consulta.
+
+        Los IDs inválidos se descartan: un pedido con producto inexistente debe
+        rechazarse con 409 en la capa de servicio, nunca con un 500 de BSON.
+        """
+        valid_ids = [ObjectId(pid) for pid in product_ids if ObjectId.is_valid(str(pid))]
+        if not valid_ids:
+            return []
+
+        cursor = self.products.find({"_id": {"$in": valid_ids}})
+        return await cursor.to_list(length=len(valid_ids))
+
+    @staticmethod
+    def _to_object_id(product_id: str) -> ObjectId:
+        if not ObjectId.is_valid(str(product_id)):
+            raise ValueError(f"Unknown product: {product_id}")
+        return ObjectId(str(product_id))
 
     async def create_with_transaction(self, order_data: dict) -> dict:
         # Fallback for Standalone MongoDB (common in local dev)
@@ -15,21 +35,21 @@ class OrderRepository:
         try:
             # 1. Deduct stock atomically
             for item in order_data["items"]:
-                product_id = item["id"]
+                product_id = self._to_object_id(item["id"])
                 quantity = item["quantity"]
                 size = item.get("size")
                 
                 if size:
                     # It's a variant purchase
                     updated = await self.products.find_one_and_update(
-                        {"_id": ObjectId(product_id), "variants.size": size, "variants.stock": {"$gte": quantity}},
+                        {"_id": product_id, "variants.size": size, "variants.stock": {"$gte": quantity}},
                         {"$inc": {"variants.$.stock": -quantity, "sold_count": quantity}},
                         return_document=True
                     )
                 else:
                     # Legacy fallback
                     updated = await self.products.find_one_and_update(
-                        {"_id": ObjectId(product_id), "stock": {"$gte": quantity}},
+                        {"_id": product_id, "stock": {"$gte": quantity}},
                         {"$inc": {"stock": -quantity, "sold_count": quantity}},
                         return_document=True
                     )
@@ -39,9 +59,7 @@ class OrderRepository:
                 
                 stock_rollbacks.append((product_id, quantity, size))
             
-            # 2. Snapshot current price (could be fetched from db here for extreme safety)
-            
-            # 3. Create the order
+            # 2. Create the order (items already carry server-side prices)
             result = await self.collection.insert_one(order_data)
             order_data["_id"] = result.inserted_id
             
@@ -52,12 +70,12 @@ class OrderRepository:
             for p_id, q, size in stock_rollbacks:
                 if size:
                     await self.products.update_one(
-                        {"_id": ObjectId(p_id), "variants.size": size},
+                        {"_id": p_id, "variants.size": size},
                         {"$inc": {"variants.$.stock": q, "sold_count": -q}}
                     )
                 else:
                     await self.products.update_one(
-                        {"_id": ObjectId(p_id)},
+                        {"_id": p_id},
                         {"$inc": {"stock": q, "sold_count": -q}}
                     )
             raise e
