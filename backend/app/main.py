@@ -66,12 +66,24 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 from app.db.database import db
 from pymongo import ASCENDING, DESCENDING
 
+async def create_indexes(database) -> None:
+    """Create the MongoDB indexes the API relies on.
+
+    The database handle is passed in explicitly so this setup can be exercised
+    without a running MongoDB instance.
+    """
+    # Optimización de DB y ordenamiento (FASE 4)
+    await database.orders.create_index([("user_id", ASCENDING)])
+    await database.orders.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    await database.activities.create_index([("user_id", ASCENDING), ("timestamp", DESCENDING)])
+
+    # S9: one account per email. The unique index also rejects the second of two
+    # concurrent registrations that both pass the application-level pre-check (S10).
+    await database.users.create_index([("email", ASCENDING)], unique=True)
+
 @app.on_event("startup")
 async def startup_event():
-    # Optimización de DB y ordenamiento (FASE 4)
-    await db.orders.create_index([("user_id", ASCENDING)])
-    await db.orders.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
-    await db.activities.create_index([("user_id", ASCENDING), ("timestamp", DESCENDING)])
+    await create_indexes(db)
 
 @app.get("/")
 async def root():

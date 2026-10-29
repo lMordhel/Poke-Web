@@ -1,10 +1,22 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
+from pymongo.errors import DuplicateKeyError
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.schemas.token import Token
 from app.core.security import hash_password, verify_password, create_token
 from app.core.config import settings
+
+EMAIL_ALREADY_EXISTS = "Email already exists"
+
+
+def _email_conflict() -> HTTPException:
+    """Single source for the duplicate-email response (S10)."""
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=EMAIL_ALREADY_EXISTS
+    )
+
 
 class AuthService:
     def __init__(self):
@@ -13,10 +25,7 @@ class AuthService:
     async def register_user(self, payload: UserCreate) -> UserOut:
         existing = await self.user_repo.get_by_email(payload.email)
         if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already exists"
-            )
+            raise _email_conflict()
         
         hashed = hash_password(payload.password)
         user_data = {
@@ -30,8 +39,13 @@ class AuthService:
         if payload.name:
             user_data["name"] = payload.name
             
-        created_user = await self.user_repo.create(user_data)
-        
+        try:
+            created_user = await self.user_repo.create(user_data)
+        except DuplicateKeyError as duplicate:
+            # A concurrent registration passed the pre-check above and inserted
+            # first; the unique index on users.email rejected this insert (S10).
+            raise _email_conflict() from duplicate
+
         return UserOut(
             id=str(created_user["_id"]),
             email=payload.email,
