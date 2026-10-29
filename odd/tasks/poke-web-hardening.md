@@ -21,13 +21,31 @@ S7. `POST /api/v1/orders/` sigue requiriendo usuario autenticado (comportamiento
 
 S8. El frontend envía `id`, `quantity` y `size` de cada ítem; muestra el `detail` real del servidor cuando el checkout falla, en lugar de un mensaje genérico.
 
+S9. `users.email` tiene un índice único en MongoDB, creado al arrancar la aplicación.
+
+S10. Registrar un email ya existente responde 409 con `detail: "Email already exists"`, incluso si dos peticiones concurrentes pasan la verificación previa, y no crea un segundo usuario.
+
+S11. Todo JWT emitido lleva un claim `type` con valor `access` o `refresh`.
+
+S12. `POST /auth/refresh` responde 401 si el token presentado no es de tipo `refresh`, y no emite cookies nuevas en ese caso.
+
+S13. (pendiente) `POST /auth/refresh` solo emite tokens para un usuario existente y activo; hoy un refresh token de una cuenta borrada sigue acuñando access tokens.
+
+S14. `long_description` se guarda saneado con una allowlist de HTML (sin `<script>`, sin atributos de evento tipo `onerror`, sin URLs `javascript:`), tanto al crear como al actualizar un producto.
+
+S15. Al leer el detalle de un producto, el `long_description` devuelto ya viene saneado, de modo que los registros antiguos con HTML sucio tampoco llegan al cliente.
+
+S16. Si la base ya tiene emails duplicados, el arranque falla con un mensaje accionable (cuántos duplicados y qué ejecutar) y existe un script de reparación idempotente.
+
 ## Tasks
 
-- T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, tests. Commit: pendiente.
-- T2 (S8) — Carrito envía datos mínimos y propaga el error real del backend. Commit: pendiente.
-- T3 — Índice único en `users.email` + manejo de `DuplicateKeyError` (S: registro duplicado → 409).
-- T4 — Claim `type` (access/refresh) en JWT y verificación en `/refresh`.
-- T5 — Sanear `long_description` o dejar de renderizar HTML crudo en `ProductDetail`.
+- T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129.
+- T2 (S8) — Carrito envía datos mínimos y propaga el error real del backend. Commit: f85e129.
+- T3 (S9-S10) — Índice único en `users.email` y `DuplicateKeyError` → 409. Commit: 0c1fc2a.
+- T3b (S13, decisión pendiente) — Qué hacer si la base ya tiene emails duplicados: `create_index(unique=True)` falla al arrancar y la API no levanta. Opciones: script de limpieza previo documentado, o degradar con log explícito.
+- T4 (S11-S12) — Claim `type` en JWT y verificación en `/auth/refresh`. Commit: 7279f84.
+- T5 (S14-S15) — Sanear `long_description` en el servidor con allowlist (`nh3`), al escribir y al leer el detalle.
+- T3b (S16) — Diagnóstico accionable al crear el índice único si hay duplicados + script de reparación idempotente.
 - T6 — Cookies `secure` por entorno, CORS con lista explícita, quitar regex `vercel.app`.
 - T7 — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` dependen del backend, no de `localStorage`.
 - T8 — Refresh real en `apiClient` (401 → refresh → reintento → logout limpio).
@@ -46,3 +64,15 @@ L1 (2026-01-01, usuario, verbatim): "analiza este proyecto , fue armado a punta 
 L2 (usuario, verbatim): "vamos punto por punto hasta lograr arreglar el productos , necesitas alguna skill para inatalrte ? o asi esta bien ?"
 
 D1 (asistente, decisión, confirmable): total falseado → 409 con cero escrituras; se instala `.venv` del backend para poder observar RED→GREEN. Ambas reversibles.
+
+E1 (evidencia, T1-T2): RED observado (10 fallos, `TypeError: OrderService.__init__() got an unexpected keyword argument 'order_repo'`). GREEN: `13 passed`. Frontend: `npm run lint` exit 0, `npm run build` exit 0. Backend: `import app.main` OK.
+
+E2 (evidencia, T3): RED verificado por el orquestador revirtiendo la implementación con `git stash`:
+- S9 → `ImportError: cannot import name 'create_indexes' from 'app.main'`.
+- S10 → `2 failed`: `pymongo.errors.DuplicateKeyError` sin manejar (sería 500).
+GREEN con implementación restaurada: `20 passed`. Backend: `import app.main` OK.
+Nota: el worker delegado no pudo ejecutar tests (runner bash/WSL roto en ese momento); escribió código y tests, la verificación completa la hizo el orquestador.
+
+E3 (evidencia, T4): RED `ImportError: cannot import name 'ACCESS_TOKEN_TYPE' from 'app.core.security'`. GREEN: `26 passed`. Backend: `import app.main` OK.
+
+L3 (hallazgo P0 durante T1, verbatim del entorno): `RuntimeError: Form data requires "python-multipart" to be installed.` — `backend/requirements.txt` no incluía `python-multipart` y `products.py` usa `File(...)`, así que una instalación limpia no podía importar la app. Corregido en el mismo commit.

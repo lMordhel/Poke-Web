@@ -1,5 +1,7 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
+
+from app.core.sanitize import sanitize_rich_text
 
 class ProductVariant(BaseModel):
     size: str
@@ -30,6 +32,13 @@ class ProductBase(BaseModel):
 class ProductCreate(ProductBase):
     slug: Optional[str] = None
 
+    # Rich HTML is rendered with dangerouslySetInnerHTML, so it is cleaned
+    # against the allowlist before the model is dumped into MongoDB (S14).
+    @field_validator("long_description")
+    @classmethod
+    def _sanitize_long_description(cls, value: Optional[str]) -> Optional[str]:
+        return sanitize_rich_text(value)
+
 class ProductUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     slug: Optional[str] = None
@@ -45,6 +54,12 @@ class ProductUpdate(BaseModel):
     is_new: Optional[bool] = None
     featured: Optional[bool] = None
     sold_count: Optional[int] = Field(None, ge=0)
+
+    # Same allowlist as ProductCreate so partial updates cannot sneak HTML in.
+    @field_validator("long_description")
+    @classmethod
+    def _sanitize_long_description(cls, value: Optional[str]) -> Optional[str]:
+        return sanitize_rich_text(value)
 
 class ProductOut(ProductBase):
     id: str

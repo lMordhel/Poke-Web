@@ -6,6 +6,7 @@ import uuid
 import re
 from bson import ObjectId
 from app.db import db
+from app.core.sanitize import sanitize_rich_text
 from app.core.security import get_current_admin_user
 from app.schemas.product import ProductCreate, ProductList, ProductOut
 
@@ -14,6 +15,17 @@ from app.schemas.product import ProductCreate, ProductList, ProductOut
 # En este caso: List, Detail, Create
 
 router = APIRouter()
+
+
+def sanitize_product_detail(doc: dict) -> dict:
+    """Clean the rich text of a product detail document (S15).
+
+    Writes are already sanitised, but rows stored before that change may still
+    contain dirty HTML, and the frontend renders this field as HTML.
+    """
+    if "long_description" in doc:
+        doc["long_description"] = sanitize_rich_text(doc["long_description"])
+    return doc
 
 @router.get("/", response_model=ProductList)
 async def read_products(
@@ -77,7 +89,7 @@ async def read_product(product_id: str):
         raise HTTPException(status_code=404, detail="Product not found")
         
     doc["id"] = str(doc.pop("_id"))
-    return doc
+    return sanitize_product_detail(doc)
 
 @router.get("/slug/{slug}", response_model=ProductOut)
 async def read_product_by_slug(slug: str):
@@ -97,7 +109,7 @@ async def read_product_by_slug(slug: str):
         raise HTTPException(status_code=404, detail="Product not found by slug or ID")
         
     doc["id"] = str(doc.pop("_id"))
-    return doc
+    return sanitize_product_detail(doc)
 
 @router.post("/", response_model=ProductOut, status_code=201)
 async def create_product(
