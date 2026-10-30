@@ -69,7 +69,7 @@ S31. `src/assets` solo contiene los archivos que la aplicación usa de verdad: e
 
 ## Tasks
 
-- T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129.
+- T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129. Revisión nativa del bloque T1-T6: R3 (aprobada).
 - T2 (S8) — Carrito envía datos mínimos y propaga el error real del backend. Commit: f85e129.
 - T3 (S9-S10) — Índice único en `users.email` y `DuplicateKeyError` → 409. Commit: 0c1fc2a.
 - T3c (S13) — `/auth/refresh` valida que el usuario exista y esté activo; si no, 401 + cookies borradas.
@@ -83,7 +83,7 @@ S31. `src/assets` solo contiene los archivos que la aplicación usa de verdad: e
 - T10 — `.env.example` (raíz y backend) y alinear `VITE_API_BASE_URL` con la documentación.
 - T11 — Ciclo de vida de pedidos en admin (`GET/PATCH /admin/orders`).
 - T12 — Paginación real en catálogo/admin y búsqueda server-side.
-- T13 — Borrar código muerto (`app/routers/`, `product.service.js` duplicado, `Header` duplicado, schemas sin uso).
+- T13 — Borrar código muerto (`app/routers/`, `product.service.js` duplicado, `Header` duplicado, schemas sin uso). Rodaja inicial: `backend/app/routers/` borrado en 40781e8; faltan el `product.service.js` duplicado, el `Header` duplicado y los schemas sin uso.
 - T14 — ErrorBoundary + ruta `*` (404) + arreglar `varsIgnorePattern` de ESLint.
 - T15 — CI (lint + build + tests) y `pre-commit`.
 
@@ -153,4 +153,12 @@ L8 (2026-10-30, usuario, decisión): «Revisar solo T1-T6 (lo nunca revisado)» 
 
 E13 (revisión de backlog T1-T6, lineage `review-5a2f1d86b41f244d`, en worktree temporal `poke-web-t1t6-review` en `1fdbc4f`): 2 lentes + refuter ejecutados. El refuter bloqueó con **R3-001 CRITICAL**: `Cart.jsx:66-74` mostraba un texto fijo «Tu carrito cambió» en el 409 y se comía el `detail` real del servidor, violando S8. Corregido en `6459898`: ambos fallos del checkout usan `error.message` (que `apiClient` rellena desde `detail`). Diff: 6 líneas. `lint` exit 0, `test` 18 passed.
 
-B1 (bloqueo de plataforma): la captura del plan de corrección (`review.capture-correction-plan`, `correctionLines: 6`) es rechazada por el facade con «collectBinding is missing or stale for current STATUS» de forma reproducible. Probado: binding re-leída inmediatamente antes, árbol quieto, objeto y string serializada, `--request-hash` antes y después de `--repository-context`, con y sin `workspaceRoot`, y **tras `gentle-ai sync`** (el linaje no reporta `managed_assets_outdated`, así que no era desajuste de assets). Seis intentos, siempre el mismo rechazo. El linaje queda en `correction_required` **sin autoridad quemada**; la corrección sí está en la rama. Opciones pendientes para el usuario: liberar la autoridad y revisar el candidato ya corregido desde cero, o dejar el linaje sin cerrar.
+B1 (bloqueo de plataforma): la captura del plan de corrección (`review.capture-correction-plan`, `correctionLines: 6`) es rechazada por el facade con «collectBinding is missing or stale for current STATUS» de forma reproducible. Probado: binding re-leída inmediatamente antes, árbol quieto, objeto y string serializada, `--request-hash` antes y después de `--repository-context`, con y sin `workspaceRoot`, y **tras `gentle-ai sync`** (el linaje no reporta `managed_assets_outdated`, así que no era desajuste de assets). Seis intentos, siempre el mismo rechazo. El linaje queda en `correction_required` **sin autoridad quemada**; la corrección sí está en la rama. Opciones pendientes para el usuario: liberar la autoridad y revisar el candidato ya corregido desde cero, o dejar el linaje sin cerrar. Resuelto en R3 por la primera vía.
+
+L9 (2026-10-30, usuario, verbatim): "a"
+
+D6 (decisión, confirmada por L9): la autoridad de `review-5a2f1d86b41f244d` se libera con `abandon` (motivo `operator_disposition`) en lugar de reintentar la captura rechazada o dejar el linaje abierto; el candidato ya corregido se revisa de cero. La autoridad vieja no se puede reaprovechar y sus hallazgos quedan en cuarentena.
+
+E14 (evidencia, B1 resuelto): `gentle_review abandon` devolvió `gentle-ai.review-reclaim-record/v1` con `status: committed`; lo descartado, según el propio proveedor, fue `{"captured_lens_results":["00-review-risk","01-review-reliability"],"findings_present":true}` y el registro quedó en `review-transactions/quarantine/review-5a2f1d86b41f244d-3787548307`. La causa raíz del rechazo de B1 no se diagnosticó: `inspect` no listaba ese linaje en ninguno de los dos `workspaceRoot` probados (`candidates: []`), así que el facade no podía reemitir su plan de corrección. Candidato nuevo revisado: en el worktree `poke-web-t1t6-review`, HEAD `490f8d7` (= `1fdbc4f` + el arreglo de `Cart.jsx`); el patch de ese arreglo es idéntico byte a byte al del commit `6459898` de la rama (sha256 del patch `3488CE57…5B49E87`), así que la revisión cubre exactamente el árbol corregido. START con `baseRef=13b7641`, `committedOnly=true`, lentes risk+reliability: 30 archivos, 2991 líneas, tier `high`, presupuesto de corrección 200.
+
+R3 (revisión nativa del candidato corregido, lineage `review-4b0f5f0564b203fe`): revisores risk y reliability capturados y el refuter exigido por el proveedor. Cierra **`approved`** y la aclaración exacta quemó la autoridad (`burn_evidence: gentle-ai.review-acknowledged/v1`). Ningún hallazgo bloqueante, ninguna transición de corrección ofrecida. Avisos informativos, que son trabajo posterior y nunca motivo para repetir la revisión de este candidato: `R1-001` WARNING en `backend/app/core/migrations.py:197-202`; `R3-001` CRITICAL en `backend/app/core/migrations.py:132` **refutado** por el refuter; `R3-002` WARNING en `backend/app/services/pricing.py:43`; `R3-003` WARNING en `backend/app/services/pricing.py:51`.
