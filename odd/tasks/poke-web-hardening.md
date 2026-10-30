@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T6, T3b y T3c cerrados; siguiente: T7.
+Estado: T1-T7, T3b y T3c cerrados; siguiente: T8.
 
 ## Specs
 
@@ -61,7 +61,7 @@ S23. Mientras la revalidación está en curso, `ProtectedRoute` y `AdminRoute` n
 - T5 (S14-S15) — Sanear `long_description` en el servidor con allowlist (`nh3`), al escribir y al leer el detalle. Commit: 2fbde41.
 - T3b (S16) — Diagnóstico accionable al crear el índice único si hay duplicados + script de reparación idempotente. Commit: 96a94fe.
 - T6 (S17-S18) — Cookies `Secure` por entorno, CORS con lista explícita desde configuración, sin regex de `vercel.app`. Rodaja: `backend/app/core/config.py`, `backend/app/main.py`, `backend/app/api/v1/endpoints/auth.py`, `backend/tests/test_cors_policy.py`, `backend/tests/test_cookie_secure.py`, `backend/tests/test_refresh_active_user.py`. Commit: 3c69770.
-- T7 (S19-S23) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commit: pendiente.
+- T7 (S19-S23) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commit: 5496710.
 - T8 — Refresh real en `apiClient` (401 → refresh → reintento → logout limpio).
 - T9 — Sacar `backend/uploads/` del índice de git y recomprimir `src/assets` a WebP.
 - T10 — `.env.example` (raíz y backend) y alinear `VITE_API_BASE_URL` con la documentación.
@@ -94,6 +94,10 @@ E4 (evidencia, T5): RED `ModuleNotFoundError: No module named 'app.core.sanitize
 E5 (evidencia, T3b): RED `ModuleNotFoundError: No module named 'app.core.migrations'`. GREEN: `65 passed`. Smoke: `plan_email_dedupe` conserva la cuenta más antigua y marca la nueva para borrar; `python -m scripts.dedupe_emails --help` funciona sin `JWT_SECRET`; el mensaje de arranque imprime el comando exacto de reparación.
 
 E6 (evidencia, T6): el commit 3c69770 contiene los tres specs (`test_cors_policy.py`, `test_cookie_secure.py`, `test_refresh_active_user.py`) junto con la implementación. GREEN verificado por el orquestador sobre el árbol actual: `python -m pytest -q` en `backend/` → `79 passed` (3.74s). No se registró aquí el RED de T6, ejecutado en la sesión anterior; el árbol actual no permite reconstruirlo sin revertir el commit.
+
+E7 (evidencia, T7): RED `MODULE_NOT_FOUND` al correr `node --test "src/**/*.test.js"` sobre `session.test.js` antes de existir `session.js`. GREEN: `9 passed` (decisiones de sesión y guardias), `npm run lint` exit 0, `npm run build` exit 0 (`✓ built in 10.96s`). Verificación proporcional al no existir runner de DOM: la lógica de decisión se extrajo a un módulo puro y los componentes son envoltorios triviales. No se hizo comprobación en navegador contra el backend real (requiere Mongo y API levantados), queda para una pasada manual.
+
+C1 (chore, 4ab0c24): `.pi/` (config local de subagentes) entró en `.gitignore`; al estar sin trackear, `gentle_review assess` no podía evaluar ningún candidato del repo.
 
 L4 (2026-10-29, usuario, verbatim): "(t6)si bien aparece que esta en produccion pero esta caido no tiene funcinalidad por ahora solo trabajaremos en local, (s13)haz tu recomendacion"
 
