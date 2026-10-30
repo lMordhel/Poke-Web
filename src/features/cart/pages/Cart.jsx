@@ -64,11 +64,13 @@ const Cart = () => {
       console.error('Error during checkout:', error);
 
       // 409 = el catálogo cambió desde que se armó el carrito (precio o stock).
+      // El servidor dice exactamente qué pasó (precio, producto o talla inexistente,
+      // stock insuficiente): se muestra su `detail`, no un texto fijo (S8).
       if (error.status === 409) {
         Swal.fire({
           icon: 'warning',
           title: 'Tu carrito cambió',
-          text: 'Algún producto cambió de precio o se quedó sin stock. Revisa el carrito y vuelve a intentarlo.',
+          text: error.message || 'Algún producto cambió de precio o se quedó sin stock. Revisa el carrito y vuelve a intentarlo.',
         });
         return;
       }
@@ -76,7 +78,7 @@ const Cart = () => {
       Swal.fire({
         icon: 'error',
         title: 'Oops...',
-        text: 'Hubo un error al procesar tu pedido. Intenta nuevamente.',
+        text: error.message || 'Hubo un error al procesar tu pedido. Intenta nuevamente.',
       });
     } finally {
       setIsProcessing(false);
