@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T8, T3b y T3c cerrados; siguiente: T9.
+Estado: T1-T9, T3b y T3c cerrados; siguiente: T10.
 
 ## Specs
 
@@ -63,6 +63,10 @@ S28. Las peticiones a `/auth/login`, `/auth/register`, `/auth/refresh` y `/auth/
 
 S29. Un error distinto de 401 (400, 403, 500, red) no dispara refresh ni reintento.
 
+S30. `backend/uploads/` no está en el índice de git: los archivos subidos en tiempo de ejecución existen solo en disco y la ruta está ignorada.
+
+S31. Las imágenes de `src/assets` se sirven en WebP con las mismas dimensiones que los PNG originales, y `src/assets/images.js` no referencia ningún archivo inexistente.
+
 ## Tasks
 
 - T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129.
@@ -75,7 +79,7 @@ S29. Un error distinto de 401 (400, 403, 500, red) no dispara refresh ni reinten
 - T6 (S17-S18) — Cookies `Secure` por entorno, CORS con lista explícita desde configuración, sin regex de `vercel.app`. Rodaja: `backend/app/core/config.py`, `backend/app/main.py`, `backend/app/api/v1/endpoints/auth.py`, `backend/tests/test_cors_policy.py`, `backend/tests/test_cookie_secure.py`, `backend/tests/test_refresh_active_user.py`. Commit: 3c69770.
 - T7 (S19-S25) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/shared/components/SessionUnavailable.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commits: 5496710, b7f98f1.
 - T8 (S26-S29) — Refresh real en `apiClient`: 401 → `/auth/refresh` → reintento único → logout limpio. Rodaja: `src/lib/request.js`, `src/lib/request.test.js`, `src/lib/axios.js`, `src/features/auth/auth.context.jsx`. Commit: 9fae16e.
-- T9 — Sacar `backend/uploads/` del índice de git y recomprimir `src/assets` a WebP.
+- T9 (S30-S31) — `backend/uploads/` fuera del índice de git y assets recompirmidos a WebP. Rodaja: `.gitignore`, `src/assets/`. Commits: d51d454, b1f0da2.
 - T10 — `.env.example` (raíz y backend) y alinear `VITE_API_BASE_URL` con la documentación.
 - T11 — Ciclo de vida de pedidos en admin (`GET/PATCH /admin/orders`).
 - T12 — Paginación real en catálogo/admin y búsqueda server-side.
@@ -134,3 +138,7 @@ L6 (2026-10-30, usuario, decisión): eligió «Seguir con T8 (refresh real en ap
 E9 (evidencia, T8): RED `npm run test` → `1 failed` con `src/lib/request.test.js` (el módulo `./request.js` todavía no existía). GREEN: `18 passed`, `npm run lint` exit 0, `npm run build` exit 0 (`✓ built in 4.76s`). Casos cubiertos: reintento único tras refresh correcto, refresh fallido sin reintento, reintento que vuelve a dar 401 sin segundo refresh, los cuatro endpoints de auth excluidos y 400/403/500 sin refresh.
 
 E10 (revisión nativa de T8, lineage `review-96c7b12790511d90`, lentes risk/resilience/reliability): **aprobada** (`state: approved`, autoridad quemada en la aclaración exacta). Sin hallazgos bloqueantes. Quedan tres avisos informativos, explícitamente no bloqueantes y fuera de este candidato: `R3-001` y `R4-001` en `src/lib/request.js:39-46` (recursión del reintento) y `R3-002` en `src/lib/request.test.js:18-57` (helpers de prueba). Se atienden si T11/T12 vuelven a tocar `apiClient`.
+
+E11 (evidencia, T9): 13 archivos de `backend/uploads/` sacados del índice con `git rm --cached` (siguen en disco) y `backend/uploads/` añadido a `.gitignore`. Assets: 8 PNG de ~5.9 MB convertidos con `ffmpeg -c:v libwebp -quality 82`; dimensiones verificadas con `ffprobe` (2816x1536; `fondo1` 2816x1504) e inspección visual de `charmanderpush.webp` sin artefactos. `src/assets` pasó de 47,2 MB a 1,52 MB. `bulbasaurpush.png` (5,9 MB) eliminado: el catálogo ya importaba su `.webp`. `npm run build` exit 0, `npm run lint` exit 0, `npm run test` 18 passed, y `rg "\.png" src` no deja ninguna referencia rota.
+
+H1 (hallazgo fuera de alcance, durante T9): `backend/app/api/v1/endpoints/products.py:248` devuelve `image_url = f"http://localhost:8000/uploads/{secure_filename}"` con el origen hardcodeado. Debería salir de configuración; encaja en T10.
