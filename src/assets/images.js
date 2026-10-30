@@ -1,13 +1,13 @@
 // Importar todas las imágenes
-import charmanderpush from './charmanderpush.png';
-import squirtlepush from './squirtlepush.png';
+import charmanderpush from './charmanderpush.webp';
+import squirtlepush from './squirtlepush.webp';
 import bulbasaurpush from './bulbasaurpush.webp';
-import eeveepush from './eeveepush.png';
-import jigglypuffpush from './jigglypuffpush.png';
-import gengarpush from './gengarpush.png';
+import eeveepush from './eeveepush.webp';
+import jigglypuffpush from './jigglypuffpush.webp';
+import gengarpush from './gengarpush.webp';
 import snorlaxpush from './snorlaxpush.webp';
-import charizardpush from './charizardpush.png';
-import fondo1 from './fondo1.png';
+import charizardpush from './charizardpush.webp';
+import fondo1 from './fondo1.webp';
 
 // Exportar como objeto para fácil acceso
 export const images = {
