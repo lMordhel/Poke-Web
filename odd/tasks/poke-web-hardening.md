@@ -43,13 +43,17 @@ S18. Las cookies `access_token` y `refresh_token` se emiten `HttpOnly` y `SameSi
 
 S19. `AuthProvider` no usa `localStorage` como fuente de verdad: al montar consulta `GET /auth/me` y construye el usuario desde esa respuesta.
 
-S20. Si `GET /auth/me` falla (401 o error de red), el contexto queda sin usuario y la entrada `currentUser` de `localStorage` se borra.
+S20. Si `GET /auth/me` responde 401 o 403, el contexto queda sin usuario y la entrada `currentUser` de `localStorage` se borra.
 
 S21. `ProtectedRoute` redirige a `/login` cuando el contexto no tiene usuario, aunque `localStorage.currentUser` exista y diga `loggedIn: true`.
 
 S22. `AdminRoute` deja pasar solo si el rol del servidor es `admin`; autenticado sin rol admin va a `/dashboard`, sin sesión va a `/login`.
 
 S23. Mientras la revalidación está en curso, `ProtectedRoute` y `AdminRoute` no renderizan el contenido protegido ni redirigen.
+
+S24. Si `GET /auth/me` falla por una causa transitoria (error de red o 5xx), la sesión no se destruye: se reintenta una vez, la caché se conserva y la aplicación muestra un estado de sesión no verificada con reintento manual, sin redirigir a `/login` y sin abrir la ruta protegida.
+
+S25. Un 401 durante la carga del panel cierra la sesión (el contexto queda sin usuario y el guardia redirige a `/login`), en lugar de registrarse solo en consola.
 
 ## Tasks
 
@@ -61,7 +65,7 @@ S23. Mientras la revalidación está en curso, `ProtectedRoute` y `AdminRoute` n
 - T5 (S14-S15) — Sanear `long_description` en el servidor con allowlist (`nh3`), al escribir y al leer el detalle. Commit: 2fbde41.
 - T3b (S16) — Diagnóstico accionable al crear el índice único si hay duplicados + script de reparación idempotente. Commit: 96a94fe.
 - T6 (S17-S18) — Cookies `Secure` por entorno, CORS con lista explícita desde configuración, sin regex de `vercel.app`. Rodaja: `backend/app/core/config.py`, `backend/app/main.py`, `backend/app/api/v1/endpoints/auth.py`, `backend/tests/test_cors_policy.py`, `backend/tests/test_cookie_secure.py`, `backend/tests/test_refresh_active_user.py`. Commit: 3c69770.
-- T7 (S19-S23) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commit: 5496710.
+- T7 (S19-S25) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/shared/components/SessionUnavailable.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commits: 5496710, b7f98f1.
 - T8 — Refresh real en `apiClient` (401 → refresh → reintento → logout limpio).
 - T9 — Sacar `backend/uploads/` del índice de git y recomprimir `src/assets` a WebP.
 - T10 — `.env.example` (raíz y backend) y alinear `VITE_API_BASE_URL` con la documentación.
@@ -98,6 +102,16 @@ E6 (evidencia, T6): el commit 3c69770 contiene los tres specs (`test_cors_policy
 E7 (evidencia, T7): RED `MODULE_NOT_FOUND` al correr `node --test "src/**/*.test.js"` sobre `session.test.js` antes de existir `session.js`. GREEN: `9 passed` (decisiones de sesión y guardias), `npm run lint` exit 0, `npm run build` exit 0 (`✓ built in 10.96s`). Verificación proporcional al no existir runner de DOM: la lógica de decisión se extrajo a un módulo puro y los componentes son envoltorios triviales. No se hizo comprobación en navegador contra el backend real (requiere Mongo y API levantados), queda para una pasada manual.
 
 C1 (chore, 4ab0c24): `.pi/` (config local de subagentes) entró en `.gitignore`; al estar sin trackear, `gentle_review assess` no podía evaluar ningún candidato del repo.
+
+R1 (revisión nativa, lineage `review-cbd83986b4bbbd86`, lentes risk/resilience/reliability + refuter): dos hallazgos CRITICAL atribuidos al candidato, ambos aceptados y corregidos en b7f98f1. R3-001: el `catch` del panel ya no cerraba la sesión ante un 401. R4-001: `restoreSession` trataba cualquier fallo de `/auth/me` como sesión inexistente, expulsando a un usuario válido ante un corte de red o un 5xx.
+
+L5 (usuario, verbatim de la revisión): «The new catch path only logs dashboard data-load errors; it no longer clears the token or redirects to /login as the baseline did.» y «restoreSession collapses every failure of the current-user request (5xx, offline/DNS failure, timeout, malformed 2xx body) into 'no session'».
+
+D4 (decisión, corrección): solo 401/403 destruyen la sesión; red/5xx se reintenta una vez y deja la sesión «no verificada» con la caché intacta y pantalla de reintento. El 401 tardío del panel llama a `revalidate()`. Reescribe S20, añade S24 y S25.
+
+E8 (evidencia, corrección R1, commit b7f98f1): tests primero y en rojo (`npm run test` → `1 failed`, el módulo aún no exponía el nuevo contrato). GREEN: `11 passed`, incluidos reintento, fallo transitorio (red y 500), caché intacta y decisión «unavailable». `npm run lint` exit 0, `npm run build` exit 0. Diff de la corrección: 190 líneas.
+
+R2 (revisión nativa del candidato corregido, lineage `review-2504fbf8d0a1fbf7` vía `recover` con disposición `scope_changed`): cierra en estado `escalated` por causalidad desconocida en los hallazgos `R3-revalidate-wait` y `R3-session-race`. Según el contrato del proveedor es informativo: no bloquea, pero queda como seguimiento manual para T8 (el refresh real en `apiClient` toca la misma ruta de `revalidate`).
 
 L4 (2026-10-29, usuario, verbatim): "(t6)si bien aparece que esta en produccion pero esta caido no tiene funcinalidad por ahora solo trabajaremos en local, (s13)haz tu recomendacion"
 
