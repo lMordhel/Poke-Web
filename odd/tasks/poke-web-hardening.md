@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T7, T3b y T3c cerrados; siguiente: T8.
+Estado: T1-T8, T3b y T3c cerrados; siguiente: T9.
 
 ## Specs
 
@@ -55,6 +55,14 @@ S24. Si `GET /auth/me` falla por una causa transitoria (error de red o 5xx), la 
 
 S25. Un 401 durante la carga del panel cierra la sesión (el contexto queda sin usuario y el guardia redirige a `/login`), en lugar de registrarse solo en consola.
 
+S26. Ante un 401 en una petición normal, `apiClient` pide `POST /auth/refresh` una vez y, si funciona, reintenta la petición original exactamente una vez.
+
+S27. Si el refresh falla, la petición termina con 401, se borra la caché local y el contexto queda sin usuario: logout limpio, sin bucles y sin una segunda llamada de red para cerrar la sesión.
+
+S28. Las peticiones a `/auth/login`, `/auth/register`, `/auth/refresh` y `/auth/logout` nunca disparan un refresh.
+
+S29. Un error distinto de 401 (400, 403, 500, red) no dispara refresh ni reintento.
+
 ## Tasks
 
 - T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129.
@@ -66,7 +74,7 @@ S25. Un 401 durante la carga del panel cierra la sesión (el contexto queda sin 
 - T3b (S16) — Diagnóstico accionable al crear el índice único si hay duplicados + script de reparación idempotente. Commit: 96a94fe.
 - T6 (S17-S18) — Cookies `Secure` por entorno, CORS con lista explícita desde configuración, sin regex de `vercel.app`. Rodaja: `backend/app/core/config.py`, `backend/app/main.py`, `backend/app/api/v1/endpoints/auth.py`, `backend/tests/test_cors_policy.py`, `backend/tests/test_cookie_secure.py`, `backend/tests/test_refresh_active_user.py`. Commit: 3c69770.
 - T7 (S19-S25) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/shared/components/SessionUnavailable.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commits: 5496710, b7f98f1.
-- T8 — Refresh real en `apiClient` (401 → refresh → reintento → logout limpio).
+- T8 (S26-S29) — Refresh real en `apiClient`: 401 → `/auth/refresh` → reintento único → logout limpio. Rodaja: `src/lib/request.js`, `src/lib/request.test.js`, `src/lib/axios.js`, `src/features/auth/auth.context.jsx`. Commit: 9fae16e.
 - T9 — Sacar `backend/uploads/` del índice de git y recomprimir `src/assets` a WebP.
 - T10 — `.env.example` (raíz y backend) y alinear `VITE_API_BASE_URL` con la documentación.
 - T11 — Ciclo de vida de pedidos en admin (`GET/PATCH /admin/orders`).
@@ -120,3 +128,7 @@ D2 (asistente, decisión, confirmable): el proyecto solo se usa en local por aho
 D3 (asistente, decisión, confirmada por el usuario): un refresh token de una cuenta borrada o inactiva responde 401 `"Invalid refresh token"` y borra ambas cookies; no se mantiene la sesión hasta el `exp` del refresh.
 
 L3 (hallazgo P0 durante T1, verbatim del entorno): `RuntimeError: Form data requires "python-multipart" to be installed.` — `backend/requirements.txt` no incluía `python-multipart` y `products.py` usa `File(...)`, así que una instalación limpia no podía importar la app. Corregido en el mismo commit.
+
+L6 (2026-10-30, usuario, decisión): eligió «Seguir con T8 (refresh real en apiClient)» frente a la revisión nativa de la rama completa y frente a una pasada manual en navegador de T7. Efecto explícito: el candidato de rama `sha256:e99031613ce1ad1d663d97e2f44e0f4bae1c2de63304241c3306ac4b98a7f3ce` (base `13b7641` → `ff475e6`, T1-T7 acumulados) queda **sin revisar por decisión del usuario**, no por omisión del agente.
+
+E9 (evidencia, T8): RED `npm run test` → `1 failed` con `src/lib/request.test.js` (el módulo `./request.js` todavía no existía). GREEN: `18 passed`, `npm run lint` exit 0, `npm run build` exit 0 (`✓ built in 4.76s`). Casos cubiertos: reintento único tras refresh correcto, refresh fallido sin reintento, reintento que vuelve a dar 401 sin segundo refresh, los cuatro endpoints de auth excluidos y 400/403/500 sin refresh.
