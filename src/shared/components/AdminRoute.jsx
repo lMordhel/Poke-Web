@@ -1,21 +1,24 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
+import { adminRouteDecision } from '@/features/auth/session';
 
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return null; // Or a spinner
+  const decision = adminRouteDecision(user, loading);
 
-  if (!user || (!user.loggedIn && !user.token_version)) {
+  if (decision === 'wait') return null;
+
+  if (decision === 'login') {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role === 'admin') {
-    return children;
+  // Autenticado pero sin rol admin: al panel normal.
+  if (decision === 'dashboard') {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  // Fallback: If logged in but not an admin, redirect to normal dashboard
-  return <Navigate to="/dashboard" replace />;
+  return children;
 };
 
 export default AdminRoute;

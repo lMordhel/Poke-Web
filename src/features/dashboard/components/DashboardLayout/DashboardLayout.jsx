@@ -9,10 +9,8 @@ import RecentActivity from '../RecentActivity';
 import FavoritesSection from '../FavoritesSection';
 import SettingsSection from '../SettingsSection';
 import { dashboardStyles } from '@/features/dashboard/dashboard.styles';
-import { authService } from '@/features/auth/services/authService';
+import { useAuth } from '@/features/auth';
 import { cartService } from '@/features/cart/services/cartService';
-import { clearToken } from '@/lib/axios';
-import { useNavigate } from 'react-router-dom';
 import { colors } from '@/shared/styles/theme';
 
 const DashboardContent = ({ activeTab, user, favorites, orders, loading, handleRemoveFavorite }) => {
@@ -126,7 +124,9 @@ const DashboardContent = ({ activeTab, user, favorites, orders, loading, handleR
 
 
 const DashboardLayout = () => {
-  const [user, setUser] = useState(null);
+  // La sesión vive en AuthProvider, que la revalida contra /auth/me; este layout
+  // solo carga los datos propios del panel.
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -135,8 +135,6 @@ const DashboardLayout = () => {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
@@ -144,40 +142,32 @@ const DashboardLayout = () => {
   }, []);
 
   useEffect(() => {
-    const loadUserData = async () => {
+    let cancelled = false;
+
+    const loadDashboardData = async () => {
+      if (!user) return;
+
       try {
-        const userData = await authService.getCurrentUser();
-
-        const currentUserData = {
-          id: userData.id,
-          name: userData.name || userData.email.split('@')[0],
-          email: userData.email,
-          role: userData.role,
-          isActive: userData.is_active ?? true,
-          createdAt: userData.created_at,
-          loggedIn: true,
-        };
-
-        setUser(currentUserData);
-        localStorage.setItem('currentUser', JSON.stringify(currentUserData));
-
-        const favoritesKey = `favorites_${userData.email}`;
+        const favoritesKey = `favorites_${user.email}`;
         const userFavorites = JSON.parse(localStorage.getItem(favoritesKey) || '[]');
-        setFavorites(userFavorites);
+        if (!cancelled) setFavorites(userFavorites);
 
         const userOrders = await cartService.getOrders();
-        setOrders(userOrders);
-
-        setLoading(false);
+        if (!cancelled) setOrders(userOrders);
       } catch (error) {
+        // Un 401 aquí no cambia la sesión: AuthProvider es quien decide sobre ella.
         console.error('Failed to load user data:', error);
-        clearToken();
-        navigate('/login');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
-    loadUserData();
-  }, [navigate]);
+    loadDashboardData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleFavoritesUpdate = () => {

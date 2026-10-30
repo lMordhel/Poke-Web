@@ -1,12 +1,15 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
+import { protectedRouteDecision } from '@/features/auth/session';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return null; // Or a spinner
+  const decision = protectedRouteDecision(user, loading);
 
-  if (!user || (!user.loggedIn && !user.token_version)) {
+  if (decision === 'wait') return null;
+
+  if (decision === 'login') {
     return <Navigate to="/login" replace />;
   }
 
