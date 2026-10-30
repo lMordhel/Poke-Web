@@ -1,16 +1,36 @@
+import { executeRequest } from '@/lib/request';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 if (!API_BASE_URL) {
     console.warn('⚠️ VITE_API_BASE_URL is not defined');
 }
 
+/** Evento con el que el cliente avisa que la sesión dejó de valer (S27). */
+export const SESSION_EXPIRED_EVENT = 'auth:session-expired';
+
 export const clearToken = () => {
     localStorage.removeItem('currentUser');
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+};
+
+/**
+ * Pide un refresh. Va por `fetch` directo, no por `apiClient`, para no
+ * recursar: el propio `/auth/refresh` nunca dispara otro refresh (S28).
+ */
+const refreshSession = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+        return response.ok;
+    } catch {
+        return false;
+    }
 };
 
 export const apiClient = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-
     const config = {
         headers: {
             ...options.headers,
@@ -24,10 +44,17 @@ export const apiClient = async (endpoint, options = {}) => {
     }
 
     try {
-        const response = await fetch(url, config);
+        // Un 401 se reintenta una vez tras refrescar; ver `src/lib/request.js`.
+        const response = await executeRequest({
+            endpoint,
+            config,
+            fetchImpl: (path, requestConfig) => fetch(`${API_BASE_URL}${path}`, requestConfig),
+            refreshSession,
+        });
 
         if (!response.ok) {
             if (response.status === 401) {
+                // El refresh no sirvió: logout limpio y una sola notificación.
                 clearToken();
             }
 

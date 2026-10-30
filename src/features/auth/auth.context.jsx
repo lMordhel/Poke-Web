@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from './services/authService';
+import { SESSION_EXPIRED_EVENT } from '@/lib/axios';
 import { cacheSession, restoreSession, toSessionUser } from './session';
 
 const AuthContext = createContext();
@@ -65,6 +66,22 @@ export const AuthProvider = ({ children }) => {
         cacheSession(currentUserData, window.localStorage);
         setUser(currentUserData);
         setUnavailable(false);
+    }, []);
+
+    /**
+     * Logout limpio cuando el cliente se queda sin sesión (S27): el servidor ya
+     * rechazó el refresh, así que solo se limpia el estado local, sin otra
+     * llamada de red ni bucle.
+     */
+    useEffect(() => {
+        const handleExpired = () => {
+            window.localStorage.removeItem('currentUser');
+            setUser(null);
+            setUnavailable(false);
+        };
+
+        window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+        return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
     }, []);
 
     const logout = useCallback(async () => {
