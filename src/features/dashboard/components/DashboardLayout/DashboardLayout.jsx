@@ -126,7 +126,7 @@ const DashboardContent = ({ activeTab, user, favorites, orders, loading, handleR
 const DashboardLayout = () => {
   // La sesión vive en AuthProvider, que la revalida contra /auth/me; este layout
   // solo carga los datos propios del panel.
-  const { user } = useAuth();
+  const { user, revalidate } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -155,8 +155,14 @@ const DashboardLayout = () => {
         const userOrders = await cartService.getOrders();
         if (!cancelled) setOrders(userOrders);
       } catch (error) {
-        // Un 401 aquí no cambia la sesión: AuthProvider es quien decide sobre ella.
-        console.error('Failed to load user data:', error);
+        // Un 401 aquí significa que la sesión dejó de valer después del arranque:
+        // se revalida para que AuthProvider cierre la sesión y el guardia mande a
+        // /login, en vez de dejar el panel vacío con una sesión fantasma (S25).
+        if (error?.status === 401) {
+          await revalidate();
+        } else {
+          console.error('Failed to load user data:', error);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -167,7 +173,7 @@ const DashboardLayout = () => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, revalidate]);
 
   useEffect(() => {
     const handleFavoritesUpdate = () => {

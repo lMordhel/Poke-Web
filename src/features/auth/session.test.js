@@ -84,18 +84,44 @@ test('S20 restoreSession sin sesión válida deja user en null y borra la caché
   assert.equal(storage.getItem(SESSION_CACHE_KEY), null);
 });
 
-test('S20 restoreSession borra la caché también cuando falla la red', async () => {
-  const storage = createStorage({ email: 'ash@poke.dev', loggedIn: true });
+test('S24 restoreSession reintenta una vez antes de rendirse', async () => {
+  const storage = createStorage({ email: 'viejo@poke.dev', loggedIn: true });
+  let calls = 0;
 
   const result = await restoreSession({
     fetchCurrentUser: async () => {
-      throw new TypeError('Failed to fetch');
+      calls += 1;
+      if (calls === 1) throw new TypeError('Failed to fetch');
+      return serverUser;
     },
     storage,
   });
 
-  assert.equal(result.user, null);
-  assert.equal(storage.getItem(SESSION_CACHE_KEY), null);
+  assert.equal(calls, 2);
+  assert.equal(result.user.email, 'ash@poke.dev');
+});
+
+test('S24 un fallo transitorio deja la sesión no verificada y conserva la caché', async () => {
+  for (const failure of [new TypeError('Failed to fetch'), Object.assign(new Error('500'), { status: 500 })]) {
+    const storage = createStorage({ email: 'ash@poke.dev', loggedIn: true });
+
+    const result = await restoreSession({
+      fetchCurrentUser: async () => {
+        throw failure;
+      },
+      storage,
+    });
+
+    assert.equal(result.user, null);
+    assert.equal(result.unavailable, true);
+    assert.equal(result.clearedCache, false);
+    assert.match(storage.getItem(SESSION_CACHE_KEY), /ash@poke\.dev/);
+  }
+});
+
+test('S24 con la sesión no verificada la guardia pide reintentar, no cerrar sesión', () => {
+  assert.equal(protectedRouteDecision(null, false, true), 'unavailable');
+  assert.equal(adminRouteDecision(null, false, true), 'unavailable');
 });
 
 // S21: la caché manipulada a mano no abre la ruta protegida.

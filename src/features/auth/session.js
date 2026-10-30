@@ -15,6 +15,12 @@ export const SESSION_CACHE_KEY = 'currentUser';
 
 const LOGGED_IN = true;
 
+/** Respuestas con las que el servidor dice "esta sesión ya no vale". */
+const REVOKED_STATUSES = new Set([401, 403]);
+
+/** Intentos totales de la consulta de arranque, incluido el primero. */
+const DEFAULT_ATTEMPTS = 2;
+
 /**
  * Normaliza la respuesta de `GET /auth/me` (UserOut) al shape que consume la UI.
  * `loggedIn` viaja con el objeto para que las cachés y consumidores existentes
@@ -61,42 +67,46 @@ export const clearCachedSession = (storage) => {
 };
 
 /**
- * Revalida la sesión contra el backend al arrancar la aplicación.
- *
- * @param {object} options
- * @param {() => Promise<object>} options.fetchCurrentUser consulta a `/auth/me`.
- * @param {Storage} options.storage normalmente `window.localStorage`.
- * @returns {Promise<{user: object|null, clearedCache: boolean}>}
+ * Revalida la sesión al arrancar: 2xx confirma y refresca la caché, 401/403
+ * niega y la borra, y un fallo transitorio (red o 5xx) se reintenta una vez
+ * antes de quedar como sesión no verificada, con la caché intacta.
  */
-export const restoreSession = async ({ fetchCurrentUser, storage }) => {
-  try {
-    const serverUser = await fetchCurrentUser();
-    const user = toSessionUser(serverUser);
-    cacheSession(user, storage);
-    return { user, clearedCache: false };
-  } catch {
-    // 401 por sesión caducada, 5xx o caída de red: en los tres casos la copia
-    // local no prueba nada, así que se descarta y el guardia manda a /login.
-    const clearedCache = clearCachedSession(storage);
-    return { user: null, clearedCache };
+export const restoreSession = async ({ fetchCurrentUser, storage, attempts = DEFAULT_ATTEMPTS }) => {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const serverUser = await fetchCurrentUser();
+      const user = toSessionUser(serverUser);
+      cacheSession(user, storage);
+      return { user, clearedCache: false, unavailable: false, error: null };
+    } catch (error) {
+      if (REVOKED_STATUSES.has(error?.status)) {
+        return { user: null, clearedCache: clearCachedSession(storage), unavailable: false, error };
+      }
+
+      lastError = error;
+    }
   }
+
+  return { user: null, clearedCache: false, unavailable: true, error: lastError };
 };
 
 /**
- * Decisión de `ProtectedRoute`: 'wait' | 'login' | 'allow'.
+ * Decisión de `ProtectedRoute`: 'wait' | 'login' | 'unavailable' | 'allow'.
  */
-export const protectedRouteDecision = (user, loading) => {
+export const protectedRouteDecision = (user, loading, unavailable = false) => {
   if (loading) return 'wait';
+  if (unavailable) return 'unavailable';
   if (!isAuthenticated(user)) return 'login';
   return 'allow';
 };
 
 /**
- * Decisión de `AdminRoute`: 'wait' | 'login' | 'dashboard' | 'allow'.
+ * Decisión de `AdminRoute`: 'wait' | 'login' | 'unavailable' | 'dashboard' | 'allow'.
  */
-export const adminRouteDecision = (user, loading) => {
-  if (loading) return 'wait';
-  if (!isAuthenticated(user)) return 'login';
-  if (!isAdmin(user)) return 'dashboard';
-  return 'allow';
+export const adminRouteDecision = (user, loading, unavailable = false) => {
+  const decision = protectedRouteDecision(user, loading, unavailable);
+  if (decision !== 'allow') return decision;
+  return isAdmin(user) ? 'allow' : 'dashboard';
 };

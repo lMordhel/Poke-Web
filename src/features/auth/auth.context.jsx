@@ -20,29 +20,37 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    /** `/auth/me` no pudo responder (red o 5xx): la sesión no está confirmada ni negada. */
+    const [unavailable, setUnavailable] = useState(false);
+
+    const applySession = useCallback((result) => {
+        if (result.error) {
+            console.warn('[auth] no se pudo verificar la sesión:', result.error.message);
+        }
+
+        setUser(result.user);
+        setUnavailable(result.unavailable);
+        setLoading(false);
+        return result;
+    }, []);
 
     const revalidate = useCallback(async () => {
-        const { user: sessionUser } = await restoreSession({
+        return applySession(await restoreSession({
             fetchCurrentUser: authService.getCurrentUser,
             storage: window.localStorage,
-        });
-        setUser(sessionUser);
-        return sessionUser;
-    }, []);
+        }));
+    }, [applySession]);
 
     useEffect(() => {
         let cancelled = false;
 
         const loadSession = async () => {
-            const { user: sessionUser } = await restoreSession({
+            const result = await restoreSession({
                 fetchCurrentUser: authService.getCurrentUser,
                 storage: window.localStorage,
             });
 
-            if (!cancelled) {
-                setUser(sessionUser);
-                setLoading(false);
-            }
+            if (!cancelled) applySession(result);
         };
 
         loadSession();
@@ -50,12 +58,13 @@ export const AuthProvider = ({ children }) => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [applySession]);
 
     const login = useCallback((userData) => {
         const currentUserData = toSessionUser(userData);
         cacheSession(currentUserData, window.localStorage);
         setUser(currentUserData);
+        setUnavailable(false);
     }, []);
 
     const logout = useCallback(async () => {
@@ -66,6 +75,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             window.localStorage.removeItem('currentUser');
             setUser(null);
+            setUnavailable(false);
         }
     }, []);
 
@@ -74,6 +84,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         revalidate,
+        unavailable,
         loading
     };
 
