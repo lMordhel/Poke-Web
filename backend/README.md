@@ -25,7 +25,7 @@ El stack del backend ha sido diseñado priorizando la concurrencia asíncrona, v
 
 El backend sigue una arquitectura modular en capas (Layered Architecture), promoviendo la separación de responsabilidades:
 
-- **Routers (`routers/`)**: Define los endpoints HTTP de la API, delegando la lógica de negocio a la capa de servicios. Funciona como el controlador principal.
+- **Endpoints (`api/v1/endpoints/`)**: Definen los endpoints HTTP de la API, delegando la lógica de negocio a la capa de servicios. Funciona como el controlador principal.
 - **Services (`services/`)**: Contiene la lógica de negocio y casos de uso. Orquesta llamadas a los repositorios o bases de datos sin mezclarse con detalles del protocolo HTTP.
 - **Repositories / DAL (`repositories/`)**: Data Access Layer. Se encarga exclusivamente de las interacciones asíncronas directas con MongoDB.
 - **Schemas (`schemas/`)**: Modelos de Pydantic para validar los *payloads* de entrada (Requests) y serializar los datos de salida (Responses), asegurando tipado estricto.
@@ -40,11 +40,10 @@ La jerarquía del código está optimizada para escalabilidad y mantenimiento:
 ```text
 backend/
  ├── app/                   # Directorio raíz del código fuente
- │    ├── api/              # Ensamblado del enrutador principal (ej: v1)
+ │    ├── api/              # Ensamblado del enrutador principal (v1) y sus endpoints por entidad
  │    ├── core/             # Configuración central (settings, security, rate limiter, exceptions)
  │    ├── db/               # Conexión asíncrona a la base de datos (Motor MongoDB)
  │    ├── repositories/     # Patrón repositorio para abstracción de consultas a DB
- │    ├── routers/          # Controladores / Endpoints organizados por entidades (users, products, orders)
  │    ├── schemas/          # Modelos de Pydantic para validación y tipado de DTOs
  │    ├── services/         # Lógica de negocio encapsulada
  │    └── main.py           # Entrypoint de FastAPI (Configuración de middlewares, CORS, init)
