@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import ProductCard from '@/features/products/components/ProductCard/ProductCard';
 import { useHomeData } from '../hooks/useHomeData';
 import '@/shared/styles/responsive.css';
-import images from '@/assets/images';
+import fondo1 from '@/assets/fondo1.webp';
 import { homeStyles } from '@/features/home/home.styles';
 
 const features = [
@@ -245,7 +245,7 @@ const Home = () => {
             </Motion.div>
 
             <img
-              src={images.fondo1}
+              src={fondo1}
               style={homeStyles.image}
               alt="Hero Banner"
             />

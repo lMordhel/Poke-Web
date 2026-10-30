@@ -65,7 +65,7 @@ S29. Un error distinto de 401 (400, 403, 500, red) no dispara refresh ni reinten
 
 S30. `backend/uploads/` no está en el índice de git: los archivos subidos en tiempo de ejecución existen solo en disco y la ruta está ignorada.
 
-S31. Las imágenes de `src/assets` se sirven en WebP con las mismas dimensiones que los PNG originales, y `src/assets/images.js` no referencia ningún archivo inexistente.
+S31. `src/assets` solo contiene los archivos que la aplicación usa de verdad: el único asset local es el fondo de la portada (`fondo1`), en WebP con las mismas dimensiones que el PNG original. Las imágenes de producto salen de `image_url` / `images` en MongoDB, nunca de `src/assets`.
 
 ## Tasks
 
@@ -142,3 +142,9 @@ E10 (revisión nativa de T8, lineage `review-96c7b12790511d90`, lentes risk/resi
 E11 (evidencia, T9): 13 archivos de `backend/uploads/` sacados del índice con `git rm --cached` (siguen en disco) y `backend/uploads/` añadido a `.gitignore`. Assets: 8 PNG de ~5.9 MB convertidos con `ffmpeg -c:v libwebp -quality 82`; dimensiones verificadas con `ffprobe` (2816x1536; `fondo1` 2816x1504) e inspección visual de `charmanderpush.webp` sin artefactos. `src/assets` pasó de 47,2 MB a 1,52 MB. `bulbasaurpush.png` (5,9 MB) eliminado: el catálogo ya importaba su `.webp`. `npm run build` exit 0, `npm run lint` exit 0, `npm run test` 18 passed, y `rg "\.png" src` no deja ninguna referencia rota.
 
 H1 (hallazgo fuera de alcance, durante T9): `backend/app/api/v1/endpoints/products.py:248` devuelve `image_url = f"http://localhost:8000/uploads/{secure_filename}"` con el origen hardcodeado. Debería salir de configuración; encaja en T10.
+
+L7 (2026-10-30, usuario, verbatim): «pero esos se usan ? por que en moi base datos en mongo ya tengo los productos asi { … image_url: 'https://i.imgur.com/Li6hEAJ.jpeg', … }»
+
+D5 (corrección de alcance de T9, confirmada por la revisión del usuario): los ocho peluches de `src/assets` **no se usan**. El único consumidor de `images.js` era `Home.jsx`, y solo leía `images.fondo1`; el catálogo pinta `product.img || product.image_url` desde Mongo. La conversión a WebP seguía teniendo valor (Vite empaquetaba los nueve archivos en `dist/`), pero el destino correcto era borrarlos, no optimizarlos. Se elimina `images.js`, `react.svg` (sin referencias) y los ocho peluches; `Home.jsx` importa `fondo1.webp` directamente. S31 se reescribe en consecuencia.
+
+E12 (evidencia, corrección de T9): `dist/assets` pasó de nueve imágenes (1,5 MB) a una sola, `fondo1-CtyY-vjW.webp` (283 KB); `src/assets` queda en 283 KB. `rg -n "images\." src/features/home/pages/Home.jsx` ya no devuelve nada y `npm run build` / `npm run lint` / `npm run test` (18 passed) siguen en verde.
