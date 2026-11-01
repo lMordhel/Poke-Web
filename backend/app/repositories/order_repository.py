@@ -1,7 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.db import client, db
 from bson import ObjectId
 from datetime import datetime, timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrderRepository:
     def __init__(self, orders=None, products=None):
@@ -114,33 +117,56 @@ class OrderRepository:
         )
         return result.matched_count == 1
 
-    async def restore_items_stock(self, items: List[dict]) -> List[str]:
+    async def restore_items_stock(self, items: List[dict]) -> Tuple[List[str], List[str]]:
         """Devuelve al inventario lo que el checkout descontó (S39).
 
         Cada ítem vuelve a su talla/variante si la declara, o al `stock` del
-        producto si no. Un producto borrado se omite y no se inventa
-        inventario: la cancelación del pedido ya es un hecho (S42).
+        producto si no. Devuelve `(restored, failed)`: los ítems devueltos y los
+        que no se pudieron devolver. Un producto borrado se omite y no se
+        inventa inventario: la cancelación del pedido ya es un hecho (S42), así
+        que no cuenta como fallo. En cambio una variante que ya no existe, un id
+        inválido o una escritura que falla sí se reportan, porque el inventario
+        quedó incompleto y hay que corregirlo a mano.
+
+        Cada ítem se intenta por separado: uno que falle nunca impide devolver
+        el stock de los demás.
         """
-        restored = []
+        restored: List[str] = []
+        failed: List[str] = []
+
         for item in items:
-            product_id = item.get("id")
-            if not ObjectId.is_valid(str(product_id)):
-                continue
+            product_id = str(item.get("id"))
+            try:
+                if not ObjectId.is_valid(product_id):
+                    failed.append(product_id)
+                    continue
 
-            quantity = item["quantity"]
-            size = item.get("size")
-            if size:
-                result = await self.products.update_one(
-                    {"_id": ObjectId(str(product_id)), "variants.size": size},
-                    {"$inc": {"variants.$.stock": quantity, "sold_count": -quantity}},
+                quantity = item["quantity"]
+                size = item.get("size")
+                if size:
+                    result = await self.products.update_one(
+                        {"_id": ObjectId(product_id), "variants.size": size},
+                        {"$inc": {"variants.$.stock": quantity, "sold_count": -quantity}},
+                    )
+                else:
+                    result = await self.products.update_one(
+                        {"_id": ObjectId(product_id)},
+                        {"$inc": {"stock": quantity, "sold_count": -quantity}},
+                    )
+
+                if result.matched_count == 1:
+                    restored.append(product_id)
+                    continue
+
+                # Ninguna escritura coincidió: solo un producto borrado es
+                # esperado (S42). Si el producto existe, lo que ya no existe es
+                # la variante y ese stock no se puede devolver.
+                if await self.products.find_one({"_id": ObjectId(product_id)}) is not None:
+                    failed.append(product_id)
+            except Exception:
+                logger.exception(
+                    f"Order item {product_id}: no se pudo devolver el stock"
                 )
-            else:
-                result = await self.products.update_one(
-                    {"_id": ObjectId(str(product_id))},
-                    {"$inc": {"stock": quantity, "sold_count": -quantity}},
-                )
+                failed.append(product_id)
 
-            if result.matched_count == 1:
-                restored.append(str(product_id))
-
-        return restored
+        return restored, failed

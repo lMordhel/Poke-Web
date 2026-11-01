@@ -65,11 +65,33 @@ class AdminOrderService:
 
         if new_status == "cancelled":
             items = order.get("items", [])
-            restored = await self.order_repo.restore_items_stock(items)
-            if len(restored) != len(items):
+            restored, failed = await self.order_repo.restore_items_stock(items)
+            missing = len(items) - len(restored) - len(failed)
+            if missing:
                 logger.warning(
-                    f"Order {order_id} cancelled with {len(items) - len(restored)} "
+                    f"Order {order_id} cancelled with {missing} "
                     "item(s) whose product no longer exists"
+                )
+            if failed:
+                # El estado ya es `cancelled` y no se revierte: reintentar
+                # devolvería por segunda vez el stock de los ítems que sí se
+                # restauraron. El administrador corrige el resto a mano.
+                failed_items = ", ".join(
+                    f"{item.get('id')} (quantity {item.get('quantity')})"
+                    for item in items
+                    if str(item.get("id")) in failed
+                )
+                logger.critical(
+                    f"Order {order_id}: cancelled with stock that could not be "
+                    f"restored: {failed_items}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=(
+                        f"Order {order_id} was cancelled but {len(failed)} item(s) "
+                        "could not be restored to stock; the stock needs manual "
+                        "correction"
+                    ),
                 )
 
         order["status"] = new_status

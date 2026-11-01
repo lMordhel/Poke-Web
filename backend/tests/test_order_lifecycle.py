@@ -276,6 +276,58 @@ def test_cancelar_no_toca_la_variante_que_no_se_compro():
     assert _variant(products.doc(PIKACHU_ID), "35cm")["stock"] == 0
 
 
+def test_cancelar_reporta_los_items_que_no_pudo_devolver():
+    """S39: una variante borrada no vuelve, y el pedido avisa que falta corregir."""
+    products = build_products()
+    pikachu = next(product for product in products if str(product["_id"]) == PIKACHU_ID)
+    pikachu["variants"] = [
+        variant for variant in pikachu["variants"] if variant["size"] != "20cm"
+    ]
+    service, orders, product_collection = build_service([build_order()], products)
+    order_id = str(next(iter(orders.documents)))
+
+    error = status_error(service, order_id, "cancelled")
+
+    assert error.status_code == 500
+    assert order_id in error.detail
+    assert "manual" in error.detail.lower()
+    assert orders.doc(order_id)["status"] == "cancelled"
+    assert product_collection.doc(CHARIZARD_ID)["stock"] == 5  # el que sí se devuelve
+    assert product_collection.doc(CHARIZARD_ID)["sold_count"] == 6
+    assert product_collection.doc(PIKACHU_ID)["sold_count"] == 10  # no se inventa stock
+
+
+def test_cancelar_reporta_un_item_con_identificador_invalido():
+    """S39: un ítem con id inválido no se descarta en silencio ni frena a los demás."""
+    order = build_order()
+    order["items"][1]["id"] = "no-es-un-objectid"
+    service, orders, product_collection = build_service([order])
+    order_id = str(order["_id"])
+
+    error = status_error(service, order_id, "cancelled")
+
+    assert error.status_code == 500
+    assert order_id in error.detail
+    assert orders.doc(order_id)["status"] == "cancelled"
+    assert _variant(product_collection.doc(PIKACHU_ID), "20cm")["stock"] == 5
+    assert product_collection.doc(PIKACHU_ID)["sold_count"] == 8
+
+
+def test_cancelar_no_toca_el_stock_legacy_de_un_producto_con_variantes():
+    """S39: con variantes, la devolución va a la variante y no al `stock` legacy."""
+    products = build_products()
+    pikachu = next(product for product in products if str(product["_id"]) == PIKACHU_ID)
+    pikachu["stock"] = 99
+    service, orders, product_collection = build_service([build_order()], products)
+    order_id = str(next(iter(orders.documents)))
+
+    call(service.update_status(order_id, "cancelled"))
+
+    assert _variant(product_collection.doc(PIKACHU_ID), "20cm")["stock"] == 5  # 3 + 2
+    assert product_collection.doc(PIKACHU_ID)["sold_count"] == 8  # 10 - 2
+    assert product_collection.doc(PIKACHU_ID)["stock"] == 99  # el legacy no se toca
+
+
 # --- S41: avanzar no toca el inventario ----------------------------------
 
 
@@ -498,6 +550,24 @@ def test_un_estado_desconocido_responde_422_y_no_escribe_nada():
     response = http_call(app, "PATCH", f"/admin/orders/{ObjectId()}", json={"status": "enviado"})
 
     assert response.status_code == 422
+
+
+def test_un_estado_desconocido_no_escribe_nada_con_el_repositorio_real():
+    """S37: con el servicio real, el estado inválido no llega a tocar las colecciones."""
+    service, orders, products = build_service([build_order()])
+    order_id = str(next(iter(orders.documents)))
+    orders_before = copy.deepcopy(orders.documents)
+    products_before = copy.deepcopy(products.documents)
+
+    response = http_call(
+        build_api(service), "PATCH", f"/admin/orders/{order_id}", json={"status": "enviado"}
+    )
+
+    assert response.status_code == 422
+    assert orders.documents == orders_before
+    assert products.documents == products_before
+    assert orders.writes == 0
+    assert products.writes == 0
 
 
 def test_un_conflicto_de_estado_responde_409():
