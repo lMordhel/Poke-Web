@@ -6,6 +6,7 @@ import uuid
 import re
 from bson import ObjectId
 from app.db import db
+from app.core.config import settings
 from app.core.sanitize import sanitize_rich_text
 from app.core.security import get_current_admin_user
 from app.schemas.product import ProductCreate, ProductList, ProductOut
@@ -243,8 +244,9 @@ async def upload_product_image(
     except Exception as e:
         raise HTTPException(500, f"Error saving file: {e}")
         
-    # Retornar la URL estática (ej: http://localhost:8000/uploads/uuid.png)
-    # Como Vite ya tiene un proxy o el .env la base_url, retornamos solo la ruta relativa absoluta
-    image_url = f"http://localhost:8000/uploads/{secure_filename}"
+    # Retornar la URL absoluta del archivo. El origen sale de configuración
+    # (`PUBLIC_BASE_URL`), no del código: en local es http://localhost:8000 y en
+    # un despliegue es el dominio público del backend.
+    image_url = settings.upload_url(secure_filename)
     
     return {"url": image_url}

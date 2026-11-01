@@ -49,6 +49,12 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173"
     )
 
+    # --- Origen público de los archivos subidos ---
+    # Base absoluta con la que se construyen las URLs de las imágenes subidas.
+    # Debe ser un origen que el navegador pueda alcanzar: el del backend en
+    # local, el dominio público en un despliegue.
+    public_base_url: str = "http://localhost:8000"
+
     @property
     def cors_allow_origins(self) -> list[str]:
         """La lista de CORS_ORIGINS ya normalizada, lista para CORSMiddleware."""
@@ -58,6 +64,13 @@ class Settings(BaseSettings):
     def cookies_secure(self) -> bool:
         """Secure solo donde exista HTTPS: en local las cookies deben viajar por http."""
         return self.environment == "production"
+
+    def upload_url(self, filename: str) -> str:
+        """URL absoluta de un archivo de `uploads/` servido por esta API (S34).
+
+        La barra final de `PUBLIC_BASE_URL` se normaliza para no generar `//uploads`.
+        """
+        return f"{self.public_base_url.rstrip('/')}/uploads/{filename}"
 
     # Configuración de Pydantic para leer el archivo .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
