@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T10, T3b y T3c cerrados, integrados en `master` y publicados en `origin/master`; siguiente: T11.
+Estado: T1-T11, T3b y T3c cerrados, integrados en `master` y publicados en `origin/master`; siguiente: T12.
 
 ## Specs
 
@@ -73,6 +73,22 @@ S33. La documentación usa el nombre real de la variable del frontend, `VITE_API
 
 S34. La URL absoluta que `POST /products/upload-image` devuelve para una imagen subida se construye a partir de configuración (`PUBLIC_BASE_URL`, por defecto `http://localhost:8000`), sin origen hardcodeado en el código, y una barra final en la base no produce `//uploads`.
 
+S35. `GET /api/v1/admin/orders` exige rol `admin`: sin credenciales responde 401, y con sesión sin rol admin responde 403. Devuelve como máximo 100 pedidos, los más recientes primero.
+
+S36. `PATCH /api/v1/admin/orders/{order_id}` exige rol `admin` y acepta un único campo `status`, cuyo valor debe ser uno de `pending`, `processing`, `shipped`, `delivered` o `cancelled`. Cualquier otro valor responde 422 y no escribe nada.
+
+S37. Las transiciones permitidas son `pending → processing`, `pending → cancelled`, `processing → shipped`, `processing → cancelled`, `shipped → delivered` y `shipped → cancelled`. `delivered` y `cancelled` son terminales. Cualquier otra transición —incluida la del estado al mismo estado— responde 409 y no escribe nada.
+
+S38. Un `order_id` inexistente, o que no es un ObjectId válido, responde 404 y no escribe nada.
+
+S39. Un `PATCH` a `cancelled` devuelve al inventario la cantidad de cada ítem (a la talla/variante del ítem cuando la declara, al `stock` del producto cuando no) y descuenta la misma cantidad de `sold_count`; el estado del pedido queda `cancelled`.
+
+S40. Cancelar dos veces el mismo pedido no devuelve stock dos veces: la segunda petición responde 409 y el inventario queda igual que tras la primera. Lo mismo vale para dos administradores en carrera: si el estado cambió entre la lectura y la escritura, la segunda petición responde 409, no cambia el estado y no devuelve stock.
+
+S41. Una respuesta exitosa de `PATCH` devuelve el pedido completo con el estado nuevo, conservando ítems, `total`, `user_id` y `created_at`; los pedidos con estado distinto de `cancelled` no tocan el inventario.
+
+S42. Si el producto de un ítem ya no existe, la cancelación se completa igual: el pedido queda `cancelled` y se omite la devolución de ese ítem.
+
 ## Tasks
 
 - T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129. Revisión nativa del bloque T1-T6: R3 (aprobada).
@@ -87,7 +103,7 @@ S34. La URL absoluta que `POST /products/upload-image` devuelve para una imagen 
 - T8 (S26-S29) — Refresh real en `apiClient`: 401 → `/auth/refresh` → reintento único → logout limpio. Rodaja: `src/lib/request.js`, `src/lib/request.test.js`, `src/lib/axios.js`, `src/features/auth/auth.context.jsx`. Commit: 9fae16e.
 - T9 (S30-S31) — `backend/uploads/` fuera del índice de git y assets recompirmidos a WebP. Rodaja: `.gitignore`, `src/assets/`. Commits: d51d454, b1f0da2. Revisión nativa: R4 (aprobada).
 - T10 (S32-S34) — `.env.example` en raíz y `backend/`, documentación alineada con `VITE_API_BASE_URL` (incluye `/api/v1`) y origen público de las imágenes subidas desde configuración (H1). Rodaja: `backend/app/core/config.py`, `backend/app/api/v1/endpoints/products.py`, `backend/tests/test_upload_public_url.py`, `.env.example`, `backend/.env.example`, `README.md`, `backend/README.md`.
-- T11 — Ciclo de vida de pedidos en admin (`GET/PATCH /admin/orders`).
+- T11 (S35-S42) — Ciclo de vida de pedidos en admin: `GET /admin/orders` y `PATCH /admin/orders/{id}` con tabla de transiciones y devolución de stock al cancelar. Rodaja: `backend/app/api/v1/endpoints/admin.py`, `backend/app/services/admin_order_service.py`, `backend/app/services/order_status.py`, `backend/app/repositories/order_repository.py`, `backend/app/schemas/order.py`, `backend/tests/test_order_lifecycle.py`. Alcance acordado (L13): solo API, sin pantalla de administración.
 - T12 — Paginación real en catálogo/admin y búsqueda server-side.
 - T13 — Borrar código muerto (`app/routers/`, `product.service.js` duplicado, `Header` duplicado, schemas sin uso). Rodaja inicial: `backend/app/routers/` borrado en 40781e8; faltan el `product.service.js` duplicado, el `Header` duplicado y los schemas sin uso. Revisión nativa de esa rodaja: R4 (aprobada).
 - T14 — ErrorBoundary + ruta `*` (404) + arreglar `varsIgnorePattern` de ESLint.
@@ -193,3 +209,9 @@ D10 (asistente, decisión, confirmada por L12): el origen de las imágenes subid
 B2 (bloqueo de plataforma, resuelto por el usuario): la política de seguridad del harness rechazó escribir cualquier ruta con patrón dotenv (`D:\Proyectos\Poke-Web\.env.example` y `backend\.env.example`) incluso sin secretos dentro. El usuario autorizó explícitamente crearlas con la shell; `git check-ignore` confirma que no están ignoradas por `.gitignore` y quedan versionadas.
 
 E18 (evidencia, T10): RED `pytest tests/test_upload_public_url.py` → 4 failed (`Extra inputs are not permitted [public_base_url]` y `Settings ... has no attribute 'public_base_url'`). GREEN: 4 passed, suite de backend `83 passed`. Frontend sin cambios de código: `npm test` 18 passed, `npm run lint` exit 0, `npm run build` exit 0 (5,58 s). Commits: 1f0234f (S34, código + test), b9c109c (S32-S33, plantillas y documentación).
+
+L13 (2026-10-31, usuario, verbatim de las dos opciones elegidas): "Devolver stock al cancelar (recomendado)" y "Solo la API (recomendado)".
+
+D11 (asistente, decisión, confirmada por L13): el vocabulario de estados no se inventa, sale del UI que ya existe (`OrdersSection.jsx`): `pending`, `processing`, `shipped`, `delivered`, `cancelled`. La tabla queda `pending → processing|cancelled`, `processing → shipped|cancelled`, `shipped → delivered|cancelled`; `delivered` y `cancelled` son terminales y el mismo estado no es una transición. El cambio de estado es un `update_one` condicionado al estado leído, así que dos administradores en carrera no devuelven stock dos veces. Un producto borrado no bloquea la cancelación: se omite su devolución y se registra. T11 se entrega solo como API, sin pantalla de administración.
+
+E19 (evidencia, T11): RED de partida: `ImportError: cannot import name 'OrderStatusUpdate'` (la suite ni colectaba). GREEN: `22 passed` en `tests/test_order_lifecycle.py` y `105 passed` en la suite completa; frontend sin cambios de código (`npm test` 18 passed, `npm run lint` exit 0, `npm run build` exit 0). Prueba de mutación del guardia de carrera: con `{"_id": ..., "status": expected_status}` reducido a `{"_id": ...}`, falla `test_una_carrera_al_cancelar_no_devuelve_el_stock_ni_cambia_el_estado`; con el filtro real, verde. La primera versión de la prueba de doble cancelación secuencial no detectaba esa mutación (el 409 lo producía antes `ensure_transition`), y por eso se añadió el escenario de lectura obsoleta. Smoke contra `app.main`: `GET /api/v1/admin/orders` y `PATCH /api/v1/admin/orders/{id}` responden 401 sin sesión, es decir, las rutas están montadas. Lección: en FastAPI 0.162 `app.routes` no lista las rutas incluidas por `include_router`, así que la comprobación de montaje se hace con una petición real, no inspeccionando `app.routes`. Commit: 6f5709b.
