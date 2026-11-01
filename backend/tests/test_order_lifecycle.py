@@ -441,6 +441,32 @@ def test_una_carrera_al_cancelar_no_devuelve_el_stock_ni_cambia_el_estado():
     assert _variant(products.doc(PIKACHU_ID), "20cm")["stock"] == 3
 
 
+class ExplodingProducts(FakeCollection):
+    """Un producto cuya escritura falla: los demás deben devolverse igual (S43)."""
+
+    async def update_one(self, query, update):
+        if str(query.get("_id")) == CHARIZARD_ID:
+            raise RuntimeError("fallo de escritura simulado")
+        return await super().update_one(query, update)
+
+
+def test_un_error_de_escritura_responde_500_y_no_frena_a_los_demas():
+    orders = FakeCollection([build_order()])
+    products = ExplodingProducts(build_products())
+    service = AdminOrderService(order_repo=OrderRepository(orders=orders, products=products))
+    order_id = str(next(iter(orders.documents)))
+
+    error = status_error(service, order_id, "cancelled")
+
+    assert error.status_code == 500
+    assert "1 item(s)" in error.detail
+    assert orders.doc(order_id)["status"] == "cancelled"
+    # El ítem que sí se pudo devolver se devolvió; el que falló queda intacto.
+    assert _variant(products.doc(PIKACHU_ID), "20cm")["stock"] == 5
+    assert products.doc(PIKACHU_ID)["sold_count"] == 8
+    assert products.doc(CHARIZARD_ID)["stock"] == 4
+
+
 # --- S42: el producto ya no existe ---------------------------------------
 
 
