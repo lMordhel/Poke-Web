@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T9, T3b y T3c cerrados; siguiente: T10.
+Estado: T1-T9, T3b y T3c cerrados, integrados en `master` y publicados en `origin/master`; siguiente: T10.
 
 ## Specs
 
@@ -172,3 +172,9 @@ E15 (evidencia, rodaja del resto): START con `baseRef=9fae16e` y `committedOnly=
 R4 (revisión nativa de la rodaja, lineage `review-a0346c2deec5e033`): cuatro revisores capturados, cierra **`approved`** en el último evento admitido, sin refuter (ningún hallazgo severo abrió corrección) y autoridad quemada con la aclaración exacta. Un solo aviso no bloqueante: `R3-001` SUGGESTION en `src/features/cart/pages/Cart.jsx:73`.
 
 D8 (asistente, nota de plataforma): el tier `high` de R4 no viene del riesgo del cambio sino de que el nombre del archivo borrado contiene `auth`; el costo fueron cuatro ejecuciones de modelo (~62 KB de prompt cada una) para una rodaja de borrados. Lección para próximas rodajas de limpieza: acotar el rango para que el borrado de archivos con «auth» en el nombre no arrastre el tier, o aceptar el costo sabiéndolo.
+
+L11 (2026-10-31, usuario, verbatim): "haz merge si se psude y pushea y aprte explicame por que hay  D:\Proyectos\poke-web-t1t6-review"
+
+D9 (asistente, decisión, confirmada por L11): la rama `fix/order-price-authority` se integra a `master` por fast-forward (26 commits, 0 detrás) y se publica en `origin/master`. No se abre PR: el remoto solo tiene `master` y el usuario pidió merge directo. Reversible con `git reset --hard 13b7641` + push forzado, que el usuario tendría que autorizar.
+
+E16 (evidencia, integración a master): antes del merge, verificación completa sobre el árbol entregado — backend `79 passed` (`.venv`, 5,27 s) y frontend `18 passed`. Merge `--ff-only` `13b7641..1247172`: 72 archivos, 3616+/492−. Push: `13b7641..1247172  master -> master`. Estado posterior: `origin/master...HEAD` = `0 0`, árbol limpio. Se ejecutó `git worktree prune -v`, que retiró cinco registros huérfanos: cuatro `candidate-views` de revisión y `poke-web-t1t6-review`; todos apuntaban al `gitdir` viejo de `D:\Nueva carpeta\Proyectos\Poke-Web`, porque el repositorio se movió a `D:\Proyectos\Poke-Web`. El directorio `D:\Proyectos\poke-web-t1t6-review` (124 MB: 70,8 backend, 46,8 src, 6,4 .agents) sigue en disco, ya sin registro en git, pendiente de que el usuario decida borrarlo.
