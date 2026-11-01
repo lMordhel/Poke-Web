@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 
 # --- Esquemas de pedidos ---
@@ -43,3 +43,15 @@ class OrderOut(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# El ciclo de vida vive en app/services/order_status.py (tabla de
+# transiciones); este Literal solo fija lo que acepta el contrato HTTP, y un
+# test comprueba que ambos no se separen.
+OrderStatusValue = Literal["pending", "processing", "shipped", "delivered", "cancelled"]
+
+
+class OrderStatusUpdate(BaseModel):
+    """Lo único que un administrador puede cambiar de un pedido."""
+
+    status: OrderStatusValue = Field(description="Estado destino del pedido")

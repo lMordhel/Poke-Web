@@ -83,3 +83,64 @@ class OrderRepository:
     async def get_by_user_id(self, user_id: str, limit: int = 100) -> List[dict]:
         cursor = self.collection.find({"user_id": user_id}).sort("created_at", -1)
         return await cursor.to_list(length=limit)
+
+    async def list_all(self, limit: int = 100) -> List[dict]:
+        """Pedidos de todos los usuarios, los más recientes primero (S35)."""
+        cursor = self.collection.find({}).sort("created_at", -1)
+        return await cursor.to_list(length=limit)
+
+    async def get_by_id(self, order_id: str) -> Optional[dict]:
+        """El pedido pedido, o `None` si el id es inválido o no existe (S38)."""
+        if not ObjectId.is_valid(str(order_id)):
+            return None
+        return await self.collection.find_one({"_id": ObjectId(str(order_id))})
+
+    async def set_status_if_current(
+        self,
+        order_id: str,
+        expected_status: str,
+        new_status: str,
+        now: datetime,
+    ) -> bool:
+        """Cambia el estado solo si sigue siendo `expected_status` (S40).
+
+        El filtro incluye el estado actual, así que dos administradores (o dos
+        clics) no pueden aplicar el mismo cambio dos veces: el segundo no
+        encuentra el documento y recibe `False`, sin devolver stock de nuevo.
+        """
+        result = await self.collection.update_one(
+            {"_id": ObjectId(str(order_id)), "status": expected_status},
+            {"$set": {"status": new_status, "updated_at": now}},
+        )
+        return result.matched_count == 1
+
+    async def restore_items_stock(self, items: List[dict]) -> List[str]:
+        """Devuelve al inventario lo que el checkout descontó (S39).
+
+        Cada ítem vuelve a su talla/variante si la declara, o al `stock` del
+        producto si no. Un producto borrado se omite y no se inventa
+        inventario: la cancelación del pedido ya es un hecho (S42).
+        """
+        restored = []
+        for item in items:
+            product_id = item.get("id")
+            if not ObjectId.is_valid(str(product_id)):
+                continue
+
+            quantity = item["quantity"]
+            size = item.get("size")
+            if size:
+                result = await self.products.update_one(
+                    {"_id": ObjectId(str(product_id)), "variants.size": size},
+                    {"$inc": {"variants.$.stock": quantity, "sold_count": -quantity}},
+                )
+            else:
+                result = await self.products.update_one(
+                    {"_id": ObjectId(str(product_id))},
+                    {"$inc": {"stock": quantity, "sold_count": -quantity}},
+                )
+
+            if result.matched_count == 1:
+                restored.append(str(product_id))
+
+        return restored

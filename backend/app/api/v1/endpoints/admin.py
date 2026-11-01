@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends
 from typing import List
 from app.core.security import get_current_admin_user
+from app.schemas.order import OrderOut, OrderStatusUpdate
 from app.schemas.user import UserOut
+from app.services.admin_order_service import AdminOrderService, get_admin_order_service
 from app.db import db
 
 router = APIRouter()
@@ -25,6 +27,32 @@ async def get_all_users(current_admin: dict = Depends(get_current_admin_user)):
         formatted_users.append(user)
         
     return formatted_users
+
+@router.get("/orders", response_model=List[OrderOut])
+async def get_all_orders(
+    service: AdminOrderService = Depends(get_admin_order_service),
+    current_admin: dict = Depends(get_current_admin_user),
+):
+    """
+    Lista los pedidos de todos los usuarios, los más recientes primero.
+    Solo accesible para usuarios con rol 'admin'.
+    """
+    return await service.list_orders()
+
+
+@router.patch("/orders/{order_id}", response_model=OrderOut)
+async def update_order_status(
+    order_id: str,
+    payload: OrderStatusUpdate,
+    service: AdminOrderService = Depends(get_admin_order_service),
+    current_admin: dict = Depends(get_current_admin_user),
+):
+    """
+    Avanza o cancela un pedido. Las transiciones permitidas viven en
+    `app/services/order_status.py`; cancelar devuelve el stock (S37, S39).
+    """
+    return await service.update_status(order_id, payload.status)
+
 
 @router.get("/stats")
 async def get_dashboard_stats(current_admin: dict = Depends(get_current_admin_user)):
