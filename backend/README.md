@@ -50,6 +50,7 @@ backend/
  │
  ├── uploads/               # Directorio para archivos estáticos subidos localmente (ej: Imágenes de productos)
  ├── .env                   # Variables de entorno ignoradas en el control de versiones
+ ├── .env.example           # Plantilla de variables de entorno (sin secretos reales)
  ├── README.md              # Documentación técnica
  ├── requirements.txt       # Dependencias declaradas de Python
  └── seed_products.py       # Script utilitario para poblar la DB con datos iniciales
@@ -116,16 +117,22 @@ pip install -r requirements.txt
 ```
 
 **4. Configurar Variables de Entorno**
-Crear el archivo `.env` en base a requerimientos (ejemplo):
+Copia la plantilla y ajusta los valores: `cp .env.example .env`. El archivo debe declarar, como mínimo:
 ```env
 MONGO_URI=mongodb://localhost:27017
 MONGO_DB=webpoke
-JWT_SECRET=tu_clave_secreta_super_segura_super_secreta_mega_secreta_ultra_segura_mega_ultra_secreta
+JWT_SECRET=cambia-esta-clave-en-cada-entorno
+JWT_ALG=HS256
+ACCESS_TOKEN_EXPIRES_MIN=15
+REFRESH_TOKEN_EXPIRES_MIN=43200
 ENVIRONMENT=local
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+PUBLIC_BASE_URL=http://localhost:8000
 ```
 
-Dos variables gobiernan el comportamiento entre entornos:
+`JWT_SECRET` es obligatorio: sin él la aplicación no arranca. Genera uno distinto por entorno con `python -c "import secrets; print(secrets.token_urlsafe(64))"`.
+
+Tres variables gobiernan el comportamiento entre entornos:
 
 - **`ENVIRONMENT`** — `local` (por defecto) o `production`. En `local` las cookies de sesión
   viajan sin `Secure` para funcionar sobre `http://localhost`; en `production` se marcan
@@ -134,6 +141,10 @@ Dos variables gobiernan el comportamiento entre entornos:
   comodines ni regex por patrón: un origen que no esté en esta lista no recibe cabeceras CORS
   y el navegador bloquea la respuesta. Al desplegar el frontend en otro dominio hay que
   agregarlo aquí.
+- **`PUBLIC_BASE_URL`** — origen público del backend, base de la URL absoluta que devuelve
+  `POST /products/upload-image` (por defecto `http://localhost:8000`). Debe ser un origen
+  alcanzable desde el navegador: detrás de un dominio o proxy, aquí va ese dominio y no
+  `localhost`.
 
 **5. Ejecutar la Aplicación**
 ```bash

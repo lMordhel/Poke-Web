@@ -53,8 +53,7 @@ src/
  │    ├── components/   # UI reutilizable genérica (Modales, Navbars, Buttons)
  │    └── styles/       # Variables globales y utilidades CSS
  │
- ├── .env               # Variables de entorno locales
- └── index.css          # Estilos de entrada principal (Entry point CSS)
+ ├── index.css          # Estilos de entrada principal (Entry point CSS)
 ```
 
 ---
@@ -156,12 +155,14 @@ npm install
 ```
 
 **3. Configurar las Variables de Entorno**
-Crea tu archivo \`.env\` en el directorio raíz usando las especificaciones (o copiando de \`.env.example\` si aplica) incluyendo variables base para permitir conexiones a la API REST.
+Copia la plantilla de la raíz: `cp .env.example .env`. La única variable del frontend es `VITE_API_BASE_URL`, y debe incluir el prefijo `/api/v1` de la API REST, porque los servicios piden rutas como `/products` o `/auth/login` (`src/lib/axios.js`).
 
 Ejemplo:
 ```bash
-VITE_API_URL=http://localhost:8000/api # O tu URL proveída por el equipo backend
+VITE_API_BASE_URL=http://localhost:8000/api/v1 # O tu URL proveída por el equipo backend
 ```
+
+Sin esta variable el cliente avisa por consola que no sabe a qué backend llamar.
 
 **4. Levantar entorno dev**
 ```bash
