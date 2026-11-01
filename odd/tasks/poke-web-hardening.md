@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T9, T3b y T3c cerrados, integrados en `master` y publicados en `origin/master`; siguiente: T10.
+Estado: T1-T10, T3b y T3c cerrados, integrados en `master` y publicados en `origin/master`; siguiente: T11.
 
 ## Specs
 
@@ -67,6 +67,12 @@ S30. `backend/uploads/` no está en el índice de git: los archivos subidos en t
 
 S31. `src/assets` solo contiene los archivos que la aplicación usa de verdad: el único asset local es el fondo de la portada (`fondo1`), en WebP con las mismas dimensiones que el PNG original. Las imágenes de producto salen de `image_url` / `images` en MongoDB, nunca de `src/assets`.
 
+S32. Existe un `.env.example` en la raíz y otro en `backend/` que declaran, sin secretos reales, todas las variables que el código lee: `VITE_API_BASE_URL` en el frontend; `MONGO_URI`, `MONGO_DB`, `JWT_SECRET`, `ENVIRONMENT`, `CORS_ORIGINS`, `PUBLIC_BASE_URL` y las expiraciones de token en el backend.
+
+S33. La documentación usa el nombre real de la variable del frontend, `VITE_API_BASE_URL`, con el valor que el código necesita: la base de la API incluido el prefijo `/api/v1` (por ejemplo `http://localhost:8000/api/v1`). No se documenta una variable con otro nombre.
+
+S34. La URL absoluta que `POST /products/upload-image` devuelve para una imagen subida se construye a partir de configuración (`PUBLIC_BASE_URL`, por defecto `http://localhost:8000`), sin origen hardcodeado en el código, y una barra final en la base no produce `//uploads`.
+
 ## Tasks
 
 - T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129. Revisión nativa del bloque T1-T6: R3 (aprobada).
@@ -80,7 +86,7 @@ S31. `src/assets` solo contiene los archivos que la aplicación usa de verdad: e
 - T7 (S19-S25) — `AuthProvider` revalida con `/auth/me`; `ProtectedRoute`/`AdminRoute` deciden desde el backend, no desde `localStorage`. Rodaja: `src/features/auth/session.js`, `src/features/auth/session.test.js`, `src/features/auth/auth.context.jsx`, `src/shared/components/ProtectedRoute.jsx`, `src/shared/components/AdminRoute.jsx`, `src/shared/components/SessionUnavailable.jsx`, `src/features/dashboard/components/DashboardLayout/DashboardLayout.jsx`, `package.json`. Commits: 5496710, b7f98f1.
 - T8 (S26-S29) — Refresh real en `apiClient`: 401 → `/auth/refresh` → reintento único → logout limpio. Rodaja: `src/lib/request.js`, `src/lib/request.test.js`, `src/lib/axios.js`, `src/features/auth/auth.context.jsx`. Commit: 9fae16e.
 - T9 (S30-S31) — `backend/uploads/` fuera del índice de git y assets recompirmidos a WebP. Rodaja: `.gitignore`, `src/assets/`. Commits: d51d454, b1f0da2. Revisión nativa: R4 (aprobada).
-- T10 — `.env.example` (raíz y backend) y alinear `VITE_API_BASE_URL` con la documentación.
+- T10 (S32-S34) — `.env.example` en raíz y `backend/`, documentación alineada con `VITE_API_BASE_URL` (incluye `/api/v1`) y origen público de las imágenes subidas desde configuración (H1). Rodaja: `backend/app/core/config.py`, `backend/app/api/v1/endpoints/products.py`, `backend/tests/test_upload_public_url.py`, `.env.example`, `backend/.env.example`, `README.md`, `backend/README.md`.
 - T11 — Ciclo de vida de pedidos en admin (`GET/PATCH /admin/orders`).
 - T12 — Paginación real en catálogo/admin y búsqueda server-side.
 - T13 — Borrar código muerto (`app/routers/`, `product.service.js` duplicado, `Header` duplicado, schemas sin uso). Rodaja inicial: `backend/app/routers/` borrado en 40781e8; faltan el `product.service.js` duplicado, el `Header` duplicado y los schemas sin uso. Revisión nativa de esa rodaja: R4 (aprobada).
@@ -179,3 +185,11 @@ D9 (asistente, decisión, confirmada por L11): la rama `fix/order-price-authorit
 
 E16 (evidencia, integración a master): antes del merge, verificación completa sobre el árbol entregado — backend `79 passed` (`.venv`, 5,27 s) y frontend `18 passed`. Merge `--ff-only` `13b7641..1247172`: 72 archivos, 3616+/492−. Push: `13b7641..1247172  master -> master`. Estado posterior: `origin/master...HEAD` = `0 0`, árbol limpio. Se ejecutó `git worktree prune -v`, que retiró cinco registros huérfanos: cuatro `candidate-views` de revisión y `poke-web-t1t6-review`; todos apuntaban al `gitdir` viejo de `D:\Nueva carpeta\Proyectos\Poke-Web`, porque el repositorio se movió a `D:\Proyectos\Poke-Web`. El directorio `D:\Proyectos\poke-web-t1t6-review` (124 MB: 70,8 backend, 46,8 src, 6,4 .agents) sigue en disco, ya sin registro en git, pendiente de que el usuario decida borrarlo.
 E17 (evidencia, limpieza autorizada): el usuario aprobó borrar el worktree huérfano. Antes de borrar se comprobó que no hubiera trabajo único: ningún archivo fuera de `node_modules`/`.venv`/`__pycache__` tenía fecha de modificación posterior al 2026-10-30, es decir, nadie escribió nada ahí desde la revisión R3. `D:\Proyectos\poke-web-t1t6-review` (124,1 MB) se envió a la Papelera de reciclaje (reversible) en lugar de borrarse de forma permanente. `git worktree list` queda con una sola entrada y el árbol de `master` sigue limpio.
+
+L12 (2026-10-31, usuario, verbatim): "si dale"
+
+D10 (asistente, decisión, confirmada por L12): el origen de las imágenes subidas sale de `PUBLIC_BASE_URL` (por defecto `http://localhost:8000`), expuesto como `Settings.upload_url(filename)`, que normaliza una barra final. Se descartó devolver una URL relativa porque la imagen se guarda en Mongo y el catálogo la pinta tal cual (`product.img || product.image_url`). Los `.env.example` son plantillas con placeholders: nunca llevan secretos reales, y por eso se pueden versionar.
+
+B2 (bloqueo de plataforma, resuelto por el usuario): la política de seguridad del harness rechazó escribir cualquier ruta con patrón dotenv (`D:\Proyectos\Poke-Web\.env.example` y `backend\.env.example`) incluso sin secretos dentro. El usuario autorizó explícitamente crearlas con la shell; `git check-ignore` confirma que no están ignoradas por `.gitignore` y quedan versionadas.
+
+E18 (evidencia, T10): RED `pytest tests/test_upload_public_url.py` → 4 failed (`Extra inputs are not permitted [public_base_url]` y `Settings ... has no attribute 'public_base_url'`). GREEN: 4 passed, suite de backend `83 passed`. Frontend sin cambios de código: `npm test` 18 passed, `npm run lint` exit 0, `npm run build` exit 0 (5,58 s). Commits: 1f0234f (S34, código + test), b9c109c (S32-S33, plantillas y documentación).
