@@ -86,6 +86,31 @@ export const adminStyles = {
         gap: '24px',
         marginBottom: '32px'
     },
+    searchBar: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '8px'
+    },
+    searchIcon: {
+        color: '#64748b'
+    },
+    searchInput: {
+        flex: 1,
+        maxWidth: '360px',
+        padding: '10px 14px',
+        borderRadius: '8px',
+        border: '1px solid #cbd5e1',
+        backgroundColor: '#f8fafc',
+        fontSize: '14px',
+        color: colors.textPrimary,
+        outline: 'none'
+    },
+    tableMeta: {
+        fontSize: '13px',
+        color: colors.textSecondary,
+        margin: 0
+    },
     tableWrapper: {
         width: '100%',
         overflowX: 'auto',
@@ -97,6 +122,12 @@ export const adminStyles = {
         width: '100%',
         borderCollapse: 'collapse',
         textAlign: 'left'
+    },
+    emptyRow: {
+        padding: '32px 24px',
+        textAlign: 'center',
+        color: colors.textSecondary,
+        fontSize: '14px'
     },
     th: {
         padding: '16px 24px',
