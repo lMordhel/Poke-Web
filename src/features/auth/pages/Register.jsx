@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Sparkles, User, CheckCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User, CheckCircle } from 'lucide-react';
 import '@/shared/styles/responsive.css';
 import '../login.css';
 import { authStyles } from '@/features/auth/auth.styles';
-import { colors } from '@/shared/styles/theme';
+import AuthField from '@/features/auth/components/AuthField';
+import AuthShell from '@/features/auth/components/AuthShell';
 import { authService as apiService } from '@/features/auth/services/authService';
 
 const Register = () => {
@@ -56,112 +57,76 @@ const Register = () => {
   const styles = authStyles;
 
   return (
-    <div style={styles.container} className="login-container-responsive">
-      <div style={styles.card} className="login-card-responsive">
-        <div style={styles.header}>
-          <div style={styles.banner}>
-            <Sparkles size={16} />
-            Únete a nosotros
-          </div>
-          <h1 style={styles.title}>
-            Crea tu <span style={styles.highlight}>Cuenta</span>
-          </h1>
-          <p style={styles.description}>
-            Regístrate para conseguir ofertas exclusivas en peluches
-          </p>
+    <AuthShell
+      banner="Únete a nosotros"
+      title="Crea tu"
+      highlight="Cuenta"
+      description="Regístrate para conseguir ofertas exclusivas en peluches"
+    >
+      <form style={styles.form} onSubmit={handleSubmit}>
+        <AuthField
+          id="name"
+          name="name"
+          label="Nombre completo"
+          icon={<User size={18} style={styles.icon} />}
+          placeholder="Tu nombre"
+          value={formData.name}
+          onChange={handleChange}
+        />
+
+        <AuthField
+          id="email"
+          name="email"
+          type="email"
+          label="Correo electrónico"
+          icon={<Mail size={18} style={styles.icon} />}
+          placeholder="tu@email.com"
+          value={formData.email}
+          onChange={handleChange}
+        />
+
+        <div style={styles.row}>
+          <AuthField
+            id="password"
+            name="password"
+            type="password"
+            label="Contraseña"
+            icon={<Lock size={18} style={styles.icon} />}
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={handleChange}
+          />
         </div>
 
-        <form style={styles.form} onSubmit={handleSubmit}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="name">
-              <User size={18} style={styles.icon} />
-              Nombre completo
-            </label>
-            <input
-              id="name"
-              type="text"
-              name="name"
-              style={styles.input}
-              placeholder="Tu nombre"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        <AuthField
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          label="Confirmar contraseña"
+          icon={<CheckCircle size={18} style={styles.icon} />}
+          placeholder="••••••••"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          error={Boolean(error)}
+        >
+          {error && <span style={styles.errorText}>{error}</span>}
+        </AuthField>
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="email">
-              <Mail size={18} style={styles.icon} />
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              style={styles.input}
-              placeholder="tu@email.com"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        <button type="submit" style={styles.submitButton} className="login-submit-button">
+          Registrarse
+          <ArrowRight size={20} />
+        </button>
+      </form>
 
-          <div style={styles.row}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label} htmlFor="password">
-                <Lock size={18} style={styles.icon} />
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                name="password"
-                style={styles.input}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="confirmPassword">
-              <CheckCircle size={18} style={styles.icon} />
-              Confirmar contraseña
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              name="confirmPassword"
-              style={{
-                ...styles.input,
-                borderColor: error ? colors.redError : '#e5e5e5'
-              }}
-              placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-            />
-            {error && <span style={styles.errorText}>{error}</span>}
-          </div>
-
-          <button type="submit" style={styles.submitButton} className="login-submit-button">
-            Registrarse
-            <ArrowRight size={20} />
-          </button>
-        </form>
-
-        <div style={styles.footer}>
-          <p style={styles.footerText}>
-            ¿Ya tienes una cuenta?{' '}
-            <Link to="/login" style={styles.link}>
-              Inicia sesión aquí
-            </Link>
-          </p>
-        </div>
+      <div style={styles.footer}>
+        <p style={styles.footerText}>
+          ¿Ya tienes una cuenta?{' '}
+          <Link to="/login" style={styles.link}>
+            Inicia sesión aquí
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

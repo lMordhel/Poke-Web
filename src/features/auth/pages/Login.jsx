@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import '@/shared/styles/responsive.css';
 import '../login.css';
 import { authStyles } from '@/features/auth/auth.styles';
-import { colors } from '@/shared/styles/theme';
 import { authService as apiService } from '@/features/auth/services/authService';
 import { useAuth } from '@/features/auth';
+import AuthField from '@/features/auth/components/AuthField';
+import AuthShell from '@/features/auth/components/AuthShell';
 import { useActivity } from '@/features/dashboard';
 
 const Login = () => {
@@ -58,98 +59,72 @@ const Login = () => {
   const styles = authStyles;
 
   return (
-    <div style={styles.container} className="login-container-responsive">
-      <div style={styles.card} className="login-card-responsive">
-        <div style={styles.header}>
-          <div style={styles.banner}>
-            <Sparkles size={16} />
-            Bienvenido de vuelta
-          </div>
-          <h1 style={styles.title}>
-            Inicia <span style={styles.highlight}>Sesión</span>
-          </h1>
-          <p style={styles.description}>
-            Accede a tu cuenta para continuar comprando tus peluches favoritos
-          </p>
+    <AuthShell
+      banner="Bienvenido de vuelta"
+      title="Inicia"
+      highlight="Sesión"
+      description="Accede a tu cuenta para continuar comprando tus peluches favoritos"
+    >
+      <form style={styles.form} onSubmit={handleSubmit}>
+        <AuthField
+          id="email"
+          type="email"
+          label="Correo electrónico"
+          icon={<Mail size={18} style={styles.icon} />}
+          placeholder="tu@email.com"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (error) setError(''); // Limpiar error al escribir
+          }}
+          error={Boolean(error)}
+          focusHighlight
+        />
+
+        <AuthField
+          id="password"
+          type="password"
+          label="Contraseña"
+          icon={<Lock size={18} style={styles.icon} />}
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (error) setError(''); // Limpiar error al escribir
+          }}
+          error={Boolean(error)}
+          focusHighlight
+        >
+          {error && <span style={styles.errorText}>{error}</span>}
+        </AuthField>
+
+        <div style={styles.options}>
+          <label style={styles.checkboxLabel} htmlFor="remember">
+            <input id="remember" type="checkbox" style={styles.checkbox} />
+            Recordarme
+          </label>
+          <Link to="/recuperar" style={styles.forgotLink}>
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
 
-        <form style={styles.form} onSubmit={handleSubmit}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="email">
-              <Mail size={18} style={styles.icon} />
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              style={{
-                ...styles.input,
-                borderColor: error ? colors.redError : '#e5e5e5'
-              }}
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (error) setError(''); // Limpiar error al escribir
-              }}
-              onFocus={(e) => e.target.style.borderColor = colors.yellowPrimary}
-              onBlur={(e) => e.target.style.borderColor = error ? '#ff4444' : '#e5e5e5'}
-              required
-            />
-          </div>
+        <button type="submit" style={styles.submitButton} className="login-submit-button">
+          Iniciar Sesión
+          <ArrowRight size={20} />
+        </button>
+      </form>
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label} htmlFor="password">
-              <Lock size={18} style={styles.icon} />
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              style={{
-                ...styles.input,
-                borderColor: error ? colors.redError : '#e5e5e5'
-              }}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (error) setError(''); // Limpiar error al escribir
-              }}
-              onFocus={(e) => e.target.style.borderColor = colors.yellowPrimary}
-              onBlur={(e) => e.target.style.borderColor = error ? '#ff4444' : '#e5e5e5'}
-              required
-            />
-            {error && <span style={styles.errorText}>{error}</span>}
-          </div>
-
-          <div style={styles.options}>
-            <label style={styles.checkboxLabel} htmlFor="remember">
-              <input id="remember" type="checkbox" style={styles.checkbox} />
-              Recordarme
-            </label>
-            <Link to="/recuperar" style={styles.forgotLink}>
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </div>
-
-          <button type="submit" style={styles.submitButton} className="login-submit-button">
-            Iniciar Sesión
-            <ArrowRight size={20} />
-          </button>
-        </form>
-
-        <div style={styles.footer}>
-          <p style={styles.footerText}>
-            ¿No tienes una cuenta?{' '}
-            <Link to="/Register" style={styles.link} className="login-link">
-              Regístrate aquí
-            </Link>
-          </p>
-        </div>
+      <div style={styles.footer}>
+        <p style={styles.footerText}>
+          ¿No tienes una cuenta?{' '}
+          <Link to="/Register" style={styles.link} className="login-link">
+            Regístrate aquí
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
+
 export default Login;
 
