@@ -11,6 +11,10 @@ export const productService = {
         return apiClient(`/products/${id}`);
     },
 
+    getProductBySlug: async (slug) => {
+        return apiClient(`/products/slug/${slug}`);
+    },
+
     createProduct: async (productData) => {
         return apiClient('/products/', {
             method: 'POST',

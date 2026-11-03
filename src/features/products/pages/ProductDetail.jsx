@@ -5,7 +5,7 @@ import { ShoppingCart, Star, Box, ChevronLeft, Truck, Shield } from 'lucide-reac
 import { useCart } from '@/features/cart';
 import { useAuth } from '@/features/auth';
 import ProductCard from '@/features/products/components/ProductCard/ProductCard';
-import { productService } from '../services/product.service';
+import { productService } from '../services/productService';
 
 const ProductDetail = () => {
     const { slug } = useParams();
@@ -39,9 +39,9 @@ const ProductDetail = () => {
             }
 
             // fetch related products
-            productService.getProducts({ type: product.type }).then(res => {
-                if (res && res.products) {
-                    setRelatedProducts(res.products.filter(p => p.id !== product.id).slice(0, 4));
+            productService.getProducts({ type: product.type }).then(data => {
+                if (data && data.products) {
+                    setRelatedProducts(data.products.filter(p => p.id !== product.id).slice(0, 4));
                 }
             }).catch(console.error);
         }
