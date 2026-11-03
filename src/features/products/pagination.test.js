@@ -17,6 +17,7 @@ import {
   PAGE_SIZE,
   productsQuery,
   paginationState,
+  pageForResult,
   nextPage,
   prevPage,
 } from './pagination.js';
@@ -103,4 +104,16 @@ test('a blank search is not sent as a filter', () => {
   const query = new URLSearchParams(productsQuery({ search: '   ' }));
 
   assert.equal(query.get('search'), null);
+});
+
+test('a page still inside the reported range is kept', () => {
+  assert.equal(pageForResult({ page: 2, pages: 3 }), 2);
+});
+
+test('deleting the last row of the last page falls back to the last page with content', () => {
+  assert.equal(pageForResult({ page: 3, pages: 2 }), 2);
+});
+
+test('an empty result set still asks for page one', () => {
+  assert.equal(pageForResult({ page: 3, pages: 0 }), 1);
 });

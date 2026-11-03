@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { adminStyles as styles } from '@/features/admin/admin.styles';
 import { productService as apiService } from '@/features/products/services/productService';
 import Pagination from '@/features/products/components/Pagination/Pagination';
-import { nextPage, prevPage, productsQuery } from '@/features/products/pagination';
+import { nextPage, pageForResult, prevPage, productsQuery } from '@/features/products/pagination';
 import { debounce } from '@/shared/utils/debounce';
 import ProductTable from '../components/ProductTable';
 import ProductFormModal from '../components/ProductFormModal';
@@ -68,8 +68,9 @@ const AdminProducts = () => {
                 setPages(data?.pages ?? 0);
 
                 // Deleting the last row of the last page leaves the table empty.
-                if (page > 1 && page > (data?.pages ?? 0)) {
-                    setPage(Math.max(data?.pages ?? 0, 1));
+                const target = pageForResult({ page, pages: data?.pages ?? 0 });
+                if (target !== page) {
+                    setPage(target);
                 }
             } catch (err) {
                 console.error('Error fetching products', err);

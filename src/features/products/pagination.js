@@ -39,6 +39,18 @@ export function nextPage(page, pages) {
   return Math.min(clampPage(page, pages) + 1, lastPage(pages));
 }
 
+/**
+ * Which page a screen should ask for after the server reported `pages` (S53).
+ *
+ * Deleting the last row of the last page leaves the current page past the end,
+ * so the table falls back to the last page that still has content instead of
+ * stranding the user on an empty page.
+ */
+export function pageForResult({ page = 1, pages = 0 } = {}) {
+  const last = lastPage(pages);
+  return page > last ? last : Math.min(Math.max(page, 1), last);
+}
+
 /** Previous page, never before the first page. */
 export function prevPage(page, pages) {
   return Math.max(clampPage(page, pages) - 1, 1);
