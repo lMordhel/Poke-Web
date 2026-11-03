@@ -1,0 +1,4 @@
+# Store text files with LF in the repository and check them out with LF.
+# Without this, a Windows editor saving CRLF rewrites every tracked file and
+# the next commit carries tens of thousands of phantom line changes.
+* text=auto eol=lf
