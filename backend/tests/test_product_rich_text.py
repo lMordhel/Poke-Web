@@ -250,6 +250,15 @@ class FakeCursor:
         self._documents = list(documents)
         self._iterator = iter(self._documents)
 
+    def sort(self, field, direction=1):
+        # The list endpoint sorts by `_id` before slicing so consecutive pages
+        # cannot repeat or drop a document (S44).
+        self._documents = sorted(
+            self._documents, key=lambda doc: doc.get(field), reverse=direction < 0
+        )
+        self._iterator = iter(self._documents)
+        return self
+
     def skip(self, count):
         self._documents = self._documents[count:]
         self._iterator = iter(self._documents)

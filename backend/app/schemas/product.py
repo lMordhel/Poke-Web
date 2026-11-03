@@ -69,3 +69,7 @@ class ProductOut(ProductBase):
 class ProductList(BaseModel):
     products: List[ProductOut]
     total: int
+    page: int
+    limit: int
+    pages: int
+    has_more: bool

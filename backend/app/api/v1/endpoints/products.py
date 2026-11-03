@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends, UploadFile, File
 from typing import Optional, List
+import math
 import os
 import shutil
 import uuid
@@ -30,47 +31,77 @@ def sanitize_product_detail(doc: dict) -> dict:
 
 @router.get("/", response_model=ProductList)
 async def read_products(
-    # Parámetros Query (?type=Fire&search=Pika...)
+    # Parámetros Query (?type=Fire&search=Pika...&page=2&limit=12)
     type: Optional[str] = Query(None, description="Filtro por tipo de producto (ej: Fuego, Agua)"),
     search: Optional[str] = Query(None, description="Búsqueda parcial por nombre"),
-    # Paginación básica
-    skip: int = Query(0, ge=0, description="Número de registros a saltar (offset)"),
+    # Paginación por número de página, base 1 (S44)
+    page: Optional[int] = Query(None, ge=1, description="Número de página, base 1"),
+    skip: Optional[int] = Query(
+        None, ge=0, description="Offset heredado; se traduce a página (S44)"
+    ),
     limit: int = Query(50, ge=1, le=100, description="Máximo de registros a devolver (limit)")
 ):
     """
     Lista productos con filtrado, búsqueda y paginación.
-    
-    Uso: GET /api/v1/products?type=Fire&limit=10
+
+    `page` es la fuente de verdad; `skip` sigue aceptado porque clientes ya
+    desplegados lo envían, y `total` cuenta solo lo que matchea el filtro.
+
+    Uso: GET /api/v1/products?type=Fire&page=2&limit=12
     """
-    
+
     # Construcción de la consulta MongoDB (Query object)
     query = {}
-    
+
     if type:
         # Filtro exacto: type == "Fire"
         query["type"] = type
-        
-    if search:
-        # Filtro regex: Contiene 'search' (insensible a mayúsculas/minúsculas)
-        # $options: "i" hace la búsqueda case-insensitive
-        query["name"] = {"$regex": search, "$options": "i"}
-        
+
+    # El término lo escribe una persona en un input, no es una regex: se escapa
+    # para que `(`, `[`, `*` o `\` busquen texto literal en lugar de romper la
+    # consulta (S47). Un término vacío equivale a no filtrar (S48).
+    term = (search or "").strip()
+    if term:
+        query["name"] = {"$regex": re.escape(term), "$options": "i"}
+
+    # `page` gana cuando llegan ambos; `skip` se traduce a su página equivalente
+    if page is not None:
+        effective_page = page
+    elif skip is not None:
+        effective_page = skip // limit + 1
+    else:
+        effective_page = 1
+
     # Ejecutamos dos consultas:
-    # 1. Total de documentos para saber cuántas páginas hay (count_documents)
+    # 1. Total de documentos que matchean el filtro, para saber cuántas páginas hay
     total = await db.products.count_documents(query)
-    
-    # 2. Los datos paginados (find + skip + limit)
-    cursor = db.products.find(query).skip(skip).limit(limit)
-    
+    pages = math.ceil(total / limit) if total else 0
+
+    # 2. Los datos paginados (sort estable + skip + limit): sin un orden
+    # estable, dos páginas consecutivas pueden repetir u omitir documentos.
+    cursor = (
+        db.products.find(query)
+        .sort("_id", 1)
+        .skip((effective_page - 1) * limit)
+        .limit(limit)
+    )
+
     products = []
-    
+
     # Iteramos asíncronamente sobre el cursor de MongoDB
     async for doc in cursor:
         # Transformamos _id (ObjectId) a id (str) para Pydantic
         doc["id"] = str(doc.pop("_id"))
         products.append(doc)
-        
-    return ProductList(products=products, total=total)
+
+    return ProductList(
+        products=products,
+        total=total,
+        page=effective_page,
+        limit=limit,
+        pages=pages,
+        has_more=effective_page < pages,
+    )
 
 @router.get("/{product_id}", response_model=ProductOut)
 async def read_product(product_id: str):
