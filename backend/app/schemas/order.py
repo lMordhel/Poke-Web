@@ -55,3 +55,14 @@ class OrderStatusUpdate(BaseModel):
     """Lo único que un administrador puede cambiar de un pedido."""
 
     status: OrderStatusValue = Field(description="Estado destino del pedido")
+
+
+class OrderPage(BaseModel):
+    """Una página del listado de pedidos con su posición y el total (S52)."""
+
+    orders: List[OrderOut]
+    total: int
+    page: int
+    limit: int
+    pages: int
+    has_more: bool

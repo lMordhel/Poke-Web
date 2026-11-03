@@ -7,13 +7,14 @@ descontó, y solo una vez (el cambio de estado es condicional, ver
 """
 
 import logging
+import math
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import HTTPException, status
 
 from app.repositories.order_repository import OrderRepository
-from app.schemas.order import OrderOut
+from app.schemas.order import OrderOut, OrderPage
 from app.services.order_status import OrderStatusError, ensure_transition
 
 logger = logging.getLogger("api.admin.orders")
@@ -30,9 +31,19 @@ class AdminOrderService:
         # Inyectable para poder probar las reglas sin MongoDB.
         self.order_repo = order_repo if order_repo is not None else OrderRepository()
 
-    async def list_orders(self, limit: int = 100) -> List[OrderOut]:
-        documents = await self.order_repo.list_all(limit=limit)
-        return [_to_order_out(document) for document in documents]
+    async def list_orders(self, page: int = 1, limit: int = 100) -> OrderPage:
+        """Una página del listado, con su posición y el total (S52)."""
+        total = await self.order_repo.count_all()
+        pages = math.ceil(total / limit) if total else 0
+        documents = await self.order_repo.list_all(limit=limit, skip=(page - 1) * limit)
+        return OrderPage(
+            orders=[_to_order_out(document) for document in documents],
+            total=total,
+            page=page,
+            limit=limit,
+            pages=pages,
+            has_more=page < pages,
+        )
 
     async def update_status(self, order_id: str, new_status: str) -> OrderOut:
         order = await self.order_repo.get_by_id(order_id)

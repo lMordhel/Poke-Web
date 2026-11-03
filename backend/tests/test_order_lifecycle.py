@@ -25,7 +25,7 @@ from typing import get_args
 from app.api.v1.endpoints import admin as admin_endpoint
 from app.core.security import get_current_admin_user
 from app.repositories.order_repository import OrderRepository
-from app.schemas.order import OrderStatusUpdate
+from app.schemas.order import OrderPage, OrderStatusUpdate
 from app.services.admin_order_service import AdminOrderService, get_admin_order_service
 from app.services.order_status import ORDER_STATUSES, OrderStatusError, ensure_transition
 
@@ -53,6 +53,10 @@ class FakeCursor:
 
     def sort(self, field, direction):
         self._documents.sort(key=lambda doc: doc.get(field), reverse=direction < 0)
+        return self
+
+    def skip(self, count):
+        self._documents = self._documents[count:]
         return self
 
     async def to_list(self, length):
@@ -134,6 +138,11 @@ class FakeCollection:
     async def insert_one(self, document):
         self.documents[str(document["_id"])] = copy.deepcopy(document)
         return SimpleNamespace(inserted_id=document["_id"])
+
+    async def count_documents(self, query):
+        return sum(
+            1 for document in self.documents.values() if _matches(document, query)
+        )
 
 
 def build_order(status="pending", document_id=None, created_at=T0):
@@ -492,8 +501,8 @@ def test_el_listado_devuelve_los_mas_recientes_primero():
 
     listed = call(service.list_orders())
 
-    assert [order.id for order in listed] == [str(newer["_id"]), str(older["_id"])]
-    assert listed[0].status == "pending"
+    assert [order.id for order in listed.orders] == [str(newer["_id"]), str(older["_id"])]
+    assert listed.orders[0].status == "pending"
 
 
 def test_el_listado_respeta_el_limite():
@@ -502,7 +511,7 @@ def test_el_listado_respeta_el_limite():
 
     listed = call(service.list_orders(limit=2))
 
-    assert len(listed) == 2
+    assert len(listed.orders) == 2
 
 
 # --- S35/S36: contrato HTTP y guardia de administrador -------------------
@@ -515,8 +524,16 @@ class StubService:
         self._orders = orders or []
         self._error = error
 
-    async def list_orders(self, limit=100):
-        return self._orders
+    async def list_orders(self, page=1, limit=100):
+        """Misma forma que el servicio real: una página con su total (S52)."""
+        return OrderPage(
+            orders=self._orders,
+            total=len(self._orders),
+            page=page,
+            limit=limit,
+            pages=1 if self._orders else 0,
+            has_more=False,
+        )
 
     async def update_status(self, order_id, status):
         if self._error:
@@ -565,8 +582,10 @@ def test_el_listado_devuelve_los_pedidos():
     response = http_call(build_api(service), "GET", "/admin/orders")
 
     assert response.status_code == 200
-    assert response.json()[0]["status"] == "pending"
-    assert response.json()[0]["id"] == str(order["_id"])
+    body = response.json()
+    assert body["orders"][0]["status"] == "pending"
+    assert body["orders"][0]["id"] == str(order["_id"])
+    assert body["total"] == 1
 
 
 def test_un_estado_desconocido_responde_422_y_no_escribe_nada():

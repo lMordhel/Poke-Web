@@ -87,10 +87,14 @@ class OrderRepository:
         cursor = self.collection.find({"user_id": user_id}).sort("created_at", -1)
         return await cursor.to_list(length=limit)
 
-    async def list_all(self, limit: int = 100) -> List[dict]:
-        """Pedidos de todos los usuarios, los más recientes primero (S35)."""
-        cursor = self.collection.find({}).sort("created_at", -1)
+    async def list_all(self, limit: int = 100, skip: int = 0) -> List[dict]:
+        """Pedidos de todos los usuarios, los más recientes primero (S35, S52)."""
+        cursor = self.collection.find({}).sort("created_at", -1).skip(skip)
         return await cursor.to_list(length=limit)
+
+    async def count_all(self) -> int:
+        """Cuántos pedidos existen en total, para saber cuántas páginas hay (S52)."""
+        return await self.collection.count_documents({})
 
     async def get_by_id(self, order_id: str) -> Optional[dict]:
         """El pedido pedido, o `None` si el id es inválido o no existe (S38)."""

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from typing import List
 from app.core.security import get_current_admin_user
-from app.schemas.order import OrderOut, OrderStatusUpdate
+from app.schemas.order import OrderOut, OrderPage, OrderStatusUpdate
 from app.schemas.user import UserOut
 from app.services.admin_order_service import AdminOrderService, get_admin_order_service
 from app.db import db
@@ -28,16 +28,19 @@ async def get_all_users(current_admin: dict = Depends(get_current_admin_user)):
         
     return formatted_users
 
-@router.get("/orders", response_model=List[OrderOut])
+@router.get("/orders", response_model=OrderPage)
 async def get_all_orders(
+    page: int = Query(1, ge=1, description="Número de página, base 1"),
+    limit: int = Query(100, ge=1, le=100, description="Pedidos por página (tope 100)"),
     service: AdminOrderService = Depends(get_admin_order_service),
     current_admin: dict = Depends(get_current_admin_user),
 ):
     """
-    Lista los pedidos de todos los usuarios, los más recientes primero.
+    Lista los pedidos de todos los usuarios, los más recientes primero, con la
+    página, el tamaño de página, el total y si queda otra página (S52).
     Solo accesible para usuarios con rol 'admin'.
     """
-    return await service.list_orders()
+    return await service.list_orders(page=page, limit=limit)
 
 
 @router.patch("/orders/{order_id}", response_model=OrderOut)
