@@ -1,7 +1,7 @@
 # Poke-Web — Endurecimiento progresivo del e-commerce
 
 Feature: cerrar los hallazgos del análisis de arquitectura, punto por punto, empezando por la integridad del dinero.
-Estado: T1-T11, T3b y T3c cerrados, integrados en `master` y publicados en `origin/master`; siguiente: T12.
+Estado: T1-T11, T3b y T3c cerrados e integrados en `master`/`origin/master`; T12 en curso (S44-S54).
 
 ## Specs
 
@@ -91,6 +91,28 @@ S42. Si el producto de un ítem ya no existe, la cancelación se completa igual:
 
 S43. Cancelar nunca devuelve stock dos veces. Si la devolución falla para algún ítem —una talla que ya no existe en un producto que sí sigue, un identificador inválido o un error de escritura—, el pedido queda `cancelled`, los ítems que sí se pudieron devolver se devuelven, y la petición responde 500 indicando el pedido y cuántos ítems hay que corregir a mano. El estado no se revierte, para que un reintento no duplique la devolución.
 
+S44. `GET /api/v1/products/` acepta `page` (entero, base 1, `ge=1`, por defecto 1) además de `limit` (`ge=1`, `le=100`, por defecto 50). `skip` sigue aceptado por compatibilidad y se traduce a página (`skip // limit + 1`); si el cliente manda `page` y `skip`, gana `page`.
+
+S45. La respuesta de `GET /api/v1/products/` incluye `products`, `total`, `page`, `limit`, `pages` y `has_more`. `total` cuenta solo los documentos que matchean los filtros (`type` y `search`), `pages = ceil(total / limit)` y `has_more = page < pages`. Añadir estos campos no altera `products` ni `total`, que ya existían.
+
+S46. Una `page` mayor que `pages` responde 200 con `products: []` y metadatos coherentes (`has_more: false`); no es un error de cliente.
+
+S47. `search` filtra por nombre, substring y case-insensitive, y el término se trata como texto literal: los metacaracteres de regex (`(`, `)`, `[`, `*`, `\`, `.`, `+`) no se interpretan y nunca producen un error del servidor.
+
+S48. Un `search` vacío o compuesto solo por espacios equivale a no enviar `search`, y un `limit` mayor que 100 responde 422 sin consultar la base.
+
+S49. El catálogo público pide 12 productos por página y navega con botones "Anterior" y "Siguiente" deshabilitados en los extremos, más un indicador "Página X de Y".
+
+S50. El catálogo no filtra ni busca en memoria: el tipo seleccionado y el término de búsqueda viajan al servidor como `type` y `search`, la búsqueda espera 300 ms de inactividad antes de consultar y toda búsqueda o cambio de filtro vuelve a la página 1.
+
+S51. El contador del catálogo muestra el `total` que devuelve el servidor para el filtro vigente, no la cantidad de productos de la página actual.
+
+S52. `GET /api/v1/admin/orders` acepta `page` (base 1, por defecto 1) y `limit` (por defecto 100, `le=100`) y devuelve `orders`, `total`, `page`, `limit`, `pages` y `has_more`, los más recientes primero. Sigue exigiendo rol `admin`: 401 sin credenciales, 403 con sesión sin rol.
+
+S53. La tabla de productos del admin pagina contra el servidor con 12 productos por página y su buscador consulta al servidor con el mismo debounce que el catálogo.
+
+S54. Existe un único servicio de productos en el frontend: `getProductBySlug` vive en `productService.js`, `product.service.js` desaparece y ningún componente importa dos módulos distintos con la misma función.
+
 ## Tasks
 
 - T1 (S1-S7) — Precio y total autoritativos en el servidor. Rodaja: `backend/app/schemas/order.py`, `backend/app/services/pricing.py`, `backend/app/services/order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/`. Commit: f85e129. Revisión nativa del bloque T1-T6: R3 (aprobada).
@@ -106,7 +128,7 @@ S43. Cancelar nunca devuelve stock dos veces. Si la devolución falla para algú
 - T9 (S30-S31) — `backend/uploads/` fuera del índice de git y assets recompirmidos a WebP. Rodaja: `.gitignore`, `src/assets/`. Commits: d51d454, b1f0da2. Revisión nativa: R4 (aprobada).
 - T10 (S32-S34) — `.env.example` en raíz y `backend/`, documentación alineada con `VITE_API_BASE_URL` (incluye `/api/v1`) y origen público de las imágenes subidas desde configuración (H1). Rodaja: `backend/app/core/config.py`, `backend/app/api/v1/endpoints/products.py`, `backend/tests/test_upload_public_url.py`, `.env.example`, `backend/.env.example`, `README.md`, `backend/README.md`.
 - T11 (S35-S43) — Ciclo de vida de pedidos en admin: `GET /admin/orders` y `PATCH /admin/orders/{id}` con tabla de transiciones y devolución de stock al cancelar. Rodaja: `backend/app/api/v1/endpoints/admin.py`, `backend/app/services/admin_order_service.py`, `backend/app/services/order_status.py`, `backend/app/repositories/order_repository.py`, `backend/app/schemas/order.py`, `backend/tests/test_order_lifecycle.py`. Alcance acordado (L13): solo API, sin pantalla de administración. Commits: 6f5709b, endurecimiento posterior tras verificación independiente (S43).
-- T12 — Paginación real en catálogo/admin y búsqueda server-side.
+- T12 (S44-S54) — Paginación real y búsqueda server-side en catálogo y admin. Rodaja backend: `backend/app/schemas/product.py`, `backend/app/api/v1/endpoints/products.py`, `backend/app/api/v1/endpoints/admin.py`, `backend/app/services/admin_order_service.py`, `backend/app/repositories/order_repository.py`, `backend/tests/test_product_pagination.py`, `backend/tests/test_admin_orders_pagination.py`. Rodaja frontend: `src/features/products/pages/Catalog.jsx`, `src/features/products/services/productService.js` (absorbe `product.service.js`), `src/features/products/components/Pagination/Pagination.jsx`, `src/features/admin/pages/AdminProducts.jsx`, `src/features/products/pages/ProductDetail.jsx`, `src/features/products/hooks/useProductDetail.js`.
 - T13 — Borrar código muerto (`app/routers/`, `product.service.js` duplicado, `Header` duplicado, schemas sin uso). Rodaja inicial: `backend/app/routers/` borrado en 40781e8; faltan el `product.service.js` duplicado, el `Header` duplicado y los schemas sin uso. Revisión nativa de esa rodaja: R4 (aprobada).
 - T14 — ErrorBoundary + ruta `*` (404) + arreglar `varsIgnorePattern` de ESLint.
 - T15 — CI (lint + build + tests) y `pre-commit`.
@@ -225,3 +247,9 @@ E20 (evidencia, verificación independiente y endurecimiento): el verificador in
 E21 (evidencia, cierre del hueco de S43): segunda verificación independiente del endurecimiento (rango `1e4a284..05e668a`): PASS en S39, S40, S42 y S43, sin hallazgos bloqueantes, `109 passed` reproducidos por el verificador. Confirmó que el `find_one` del repositorio es lo que separa «producto borrado» (200, S42) de «variante borrada» (500, S43), que un reintento tras el 500 responde 409 sin volver a tocar el inventario, y que la guardia de carrera sigue siendo la única. Señaló que la cláusula «error de escritura» de S43 no tenía test comprometido; se añadió `test_un_error_de_escritura_responde_500_y_no_frena_a_los_demas` (RED sobre el código anterior, porque la cancelación no fallaba). Suite: `110 passed`. Observaciones no bloqueantes que quedan registradas y sin arreglar: el log de ítems fallidos filtra por id de producto, así que con dos ítems del mismo producto puede nombrar también el que sí se devolvió (el conteo del detalle sí es correcto); y `missing` se deduce por resta en vez de medirse.
 
 C2 (chore, 27c7866): el worktree tenía 161 archivos modificados con 0 sin trackear, pero `git diff --ignore-cr-at-eol` y `git diff -w` estaban vacíos: era CRLF puro sobre un índice en LF, y sin `.gitattributes` el próximo commit de T12 habría metido 24382 líneas fantasma. Pre-vuelo antes de descartar: 0 cambios reales ignorando CR, 0 ignorando todo whitespace, 0 untracked y 0 archivos `.bat`/`.cmd`/`.ps1` que requirieran CRLF. `git checkout -- .` restauró LF y se añadió `.gitattributes` con `* text=auto eol=lf`. Verificación: 167 archivos texto en `i/lf w/lf`, los 13 binarios (12 PNG y `fondo1.webp`) siguen `i/-text w/-text`, y `git add --renormalize .` no cambió ningún archivo, así que la política no introduce ruido. Los `\r` detectados en el árbol son bytes propios de esos binarios, no fin de línea de texto.
+
+L14 (2026-11-02, usuario, decisiones verbatim de las cuatro opciones elegidas): "page/limit numérico (recomendado)", "12 productos por página (recomendado)", "Botones Anterior/Siguiente + indicador (recomendado)", "Admin de productos + pedidos (recomendado)".
+
+D13 (asistente, decisión, confirmable): el contrato de paginación es `page`/`limit` numérico con `skip` conservado por compatibilidad (`page = skip // limit + 1`, y `page` gana si vienen ambos), porque `skip` ya está en producción y `AdminProducts` ya envía `page`. El término de `search` se escapa con `re.escape`: hoy la regex cruda hace que un término como `pika(` responda 500. `limit` por encima de 100 sigue respondiendo 422 y el default de `limit` no cambia (50), así que ningún cliente existente ve menos resultados de los que veía. Reversible: quitar los campos nuevos de la respuesta.
+
+D14 (asistente, decisión, confirmable): `GET /admin/orders` pasa de lista plana a objeto paginado (`orders`, `total`, `page`, `limit`, `pages`, `has_more`). Es un cambio de contrato, así que se verificó antes quién lo consume: ni el frontend ni `README.md` ni `backend/README.md` lo usan; los únicos consumidores son los tests de `test_order_lifecycle.py`, que se actualizan en la misma rodaja. El tope de 100 por página de S35 se mantiene, ahora como `limit` máximo. Reversible volviendo a devolver la lista.
